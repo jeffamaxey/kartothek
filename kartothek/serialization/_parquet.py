@@ -226,33 +226,31 @@ class ParquetSerializer(DataFrameSerializer):
                         parquet_file, columns_to_io, predicates_for_pushdown
                     )
 
-                    if len(tables) == 0:
-                        table = _empty_table_from_schema(parquet_file)
-                    else:
-                        table = pa.concat_tables(tables)
+                    table = (
+                        _empty_table_from_schema(parquet_file)
+                        if len(tables) == 0
+                        else pa.concat_tables(tables)
+                    )
+                elif columns == []:
+                    # Create an arrow table with expected index length.
+                    df = (
+                        parquet_file.schema.to_arrow_schema()
+                        .empty_table()
+                        .to_pandas(date_as_object=date_as_object)
+                    )
+                    index = pd.Int64Index(
+                        pd.RangeIndex(start=0, stop=parquet_file.metadata.num_rows)
+                    )
+                    df = pd.DataFrame(df, index=index)
+                    # convert back to table to keep downstream code untouched by this patch
+                    table = pa.Table.from_pandas(df)
                 else:
-                    # ARROW-5139 Column projection with empty columns returns a table w/out index
-                    if columns == []:
-                        # Create an arrow table with expected index length.
-                        df = (
-                            parquet_file.schema.to_arrow_schema()
-                            .empty_table()
-                            .to_pandas(date_as_object=date_as_object)
-                        )
-                        index = pd.Int64Index(
-                            pd.RangeIndex(start=0, stop=parquet_file.metadata.num_rows)
-                        )
-                        df = pd.DataFrame(df, index=index)
-                        # convert back to table to keep downstream code untouched by this patch
-                        table = pa.Table.from_pandas(df)
-                    else:
-                        table = pq.read_pandas(reader, columns=columns)
+                    table = pq.read_pandas(reader, columns=columns)
             finally:
                 reader.close()
 
         if columns is not None:
-            missing_columns = set(columns) - set(table.schema.names)
-            if missing_columns:
+            if missing_columns := set(columns) - set(table.schema.names):
                 raise ValueError(
                     "Columns cannot be found in stored dataframe: {missing}".format(
                         missing=", ".join(sorted(missing_columns))
@@ -268,10 +266,7 @@ class ParquetSerializer(DataFrameSerializer):
             )
         else:
             df = filter_df(df, filter_query)
-        if columns is not None:
-            return df.reindex(columns=columns, copy=False)
-        else:
-            return df
+        return df.reindex(columns=columns, copy=False) if columns is not None else df
 
     @classmethod
     def restore_dataframe(
@@ -326,11 +321,8 @@ class ParquetSerializer(DataFrameSerializer):
         ) from raised_error
 
     def store(self, store, key_prefix, df):
-        key = "{}.parquet".format(key_prefix)
-        if isinstance(df, pa.Table):
-            table = df
-        else:
-            table = pa.Table.from_pandas(df)
+        key = f"{key_prefix}.parquet"
+        table = df if isinstance(df, pa.Table) else pa.Table.from_pandas(df)
         buf = pa.BufferOutputStream()
 
         pq.write_table(
@@ -435,12 +427,10 @@ def _normalize_predicates(parquet_file, predicates, for_pushdown):
 
 
 def _timelike_to_arrow_encoding(value, pa_type):
-    # Date32 columns are encoded as days since 1970
-    if pa.types.is_date32(pa_type):
-        if isinstance(value, datetime.date):
-            return value.toordinal() - EPOCH_ORDINAL
-    else:
+    if not pa.types.is_date32(pa_type):
         return value
+    if isinstance(value, datetime.date):
+        return value.toordinal() - EPOCH_ORDINAL
 
 
 def _normalize_value(value, pa_type, column_name=None):
@@ -450,9 +440,7 @@ def _normalize_value(value, pa_type, column_name=None):
     if pa.types.is_string(pa_type):
         if isinstance(value, bytes):
             return value.decode("utf-8")
-        elif isinstance(value, str):
-            return value
-        elif value is None:
+        elif isinstance(value, str) or value is None:
             return value
     elif pa.types.is_binary(pa_type):
         if isinstance(value, bytes):
@@ -545,7 +533,7 @@ def _predicate_accepts(predicate, row_meta, arrow_schema, parquet_reader):
         if pd.isnull(val):
             return parquet_statistics.null_count < row_meta.num_rows
         else:
-            return not ((min_value >= val) and (max_value <= val))
+            return min_value < val or max_value > val
     elif op == "<=":
         return min_value <= val
     elif op == ">=":

@@ -8,9 +8,9 @@ def test_delete_dataset(store_factory, metadata_version, bound_delete_dataset):
     create_dataset("dataset", store_factory, metadata_version)
 
     store = store_factory()
-    assert len(list(store.keys())) > 0
+    assert list(store.keys())
     bound_delete_dataset("dataset", store_factory)
-    assert len(list(store.keys())) == 0
+    assert not list(store.keys())
 
 
 def test_delete_single_dataset(store_factory, metadata_version, bound_delete_dataset):
@@ -21,7 +21,7 @@ def test_delete_single_dataset(store_factory, metadata_version, bound_delete_dat
     create_dataset("another_dataset", store_factory, metadata_version)
     store = store_factory()
     amount_of_keys = len(list(store.keys()))
-    assert len(list(store.keys())) > 0
+    assert list(store.keys())
     bound_delete_dataset("dataset", store_factory)
     assert len(list(store.keys())) == amount_of_keys / 2, store.keys()
 
@@ -61,7 +61,7 @@ def test_delete_missing_dataset(store_factory, store_factory2, bound_delete_data
                 store2.put(k, store.get(k))
 
         bound_delete_dataset("dataset", store_factory2)
-        assert len(list(store2.keys())) == 0
+        assert not list(store2.keys())
 
 
 def test_delete_dataset_unreferenced_files(
@@ -76,7 +76,7 @@ def test_delete_dataset_unreferenced_files(
     store = store_factory()
     store.put(f"{uuid}/table/trash.parquet", b"trash")
 
-    assert len(list(store.keys())) > 0
+    assert list(store.keys())
     bound_delete_dataset(uuid, store_factory)
 
-    assert len(list(store.keys())) == 0
+    assert not list(store.keys())

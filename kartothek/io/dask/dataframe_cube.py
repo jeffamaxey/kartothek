@@ -313,23 +313,17 @@ def _ddfs_to_bag(data, cube):
         data = {cube.seed_dataset: data}
 
     ktk_cube_dataset_ids = sorted(data.keys())
-    bags = []
-    for ktk_cube_dataset_id in ktk_cube_dataset_ids:
-        bags.append(
-            db.from_delayed(data[ktk_cube_dataset_id].to_delayed()).map_partitions(
-                _convert_write_bag, ktk_cube_dataset_id=ktk_cube_dataset_id
-            )
+    bags = [
+        db.from_delayed(data[ktk_cube_dataset_id].to_delayed()).map_partitions(
+            _convert_write_bag, ktk_cube_dataset_id=ktk_cube_dataset_id
         )
-
+        for ktk_cube_dataset_id in ktk_cube_dataset_ids
+    ]
     return (db.concat(bags), ktk_cube_dataset_ids)
 
 
 def _unpack_list(l, default):  # noqa
-    l = list(l)  # noqa
-    if l:
-        return l[0]
-    else:
-        return default
+    return l[0] if (l := list(l)) else default
 
 
 def _convert_write_bag(df, ktk_cube_dataset_id):

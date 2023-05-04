@@ -26,7 +26,7 @@ def test_simple(cli, built_cube, skv, store):
     result = cli("--store=cubes", "my_cube", "delete")
     assert result.exit_code == 0
 
-    assert set(store.keys()) == set()
+    assert not set(store.keys())
 
 
 @pytest.mark.parametrize(
@@ -53,7 +53,7 @@ def test_partial_delete_include_pattern(
     for name in delete_tables:
         delete_keys |= get_dataset_keys(datasets[name])
     all_keys = set(store.keys())
-    result = cli("--store=cubes", "my_cube", "delete", "--include=" + key_pattern)
+    result = cli("--store=cubes", "my_cube", "delete", f"--include={key_pattern}")
     assert result.exit_code == 0
     assert set(store.keys()) == all_keys - delete_keys
 
@@ -90,7 +90,9 @@ def test_partial_delete_exclude_pattern(
     for name in delete_tables:
         delete_keys |= get_dataset_keys(datasets[name])
     all_keys = set(store.keys())
-    result = cli("--store=cubes", "my_cube", "delete", "--exclude=" + exclude_pattern)
+    result = cli(
+        "--store=cubes", "my_cube", "delete", f"--exclude={exclude_pattern}"
+    )
     assert result.exit_code == 0
     assert set(store.keys()) == all_keys - delete_keys
 
@@ -130,8 +132,8 @@ def test_partial_delete_include_exclude_pattern(
         "--store=cubes",
         "my_cube",
         "delete",
-        "--include=" + include_pattern,
-        "--exclude=" + exclude_pattern,
+        f"--include={include_pattern}",
+        f"--exclude={exclude_pattern}",
     )
     assert result.exit_code == 0
     assert set(store.keys()) == all_keys - delete_keys

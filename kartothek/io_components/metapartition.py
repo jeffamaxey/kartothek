@@ -196,23 +196,21 @@ class MetaPartitionIterator(Iterator):
 
     def __next__(self):
         current = self.metapartition
-        if len(current) == 1:
-            if current.label is None:
-                raise StopIteration()
+        if len(current) == 1 and current.label is None:
+            raise StopIteration()
 
         if self.position >= len(current.metapartitions):
             raise StopIteration()
-        else:
-            mp_dict = current.metapartitions[self.position]
-            # These are global attributes, i.e. the nested metapartitions do not carry these and need
-            # to be added here
-            mp_dict["dataset_metadata"] = current.dataset_metadata
-            mp_dict["metadata_version"] = current.metadata_version
-            mp_dict["table_meta"] = current.table_meta
-            mp_dict["partition_keys"] = current.partition_keys
-            mp_dict["logical_conjunction"] = current.logical_conjunction
-            self.position += 1
-            return MetaPartition.from_dict(mp_dict)
+        mp_dict = current.metapartitions[self.position]
+        # These are global attributes, i.e. the nested metapartitions do not carry these and need
+        # to be added here
+        mp_dict["dataset_metadata"] = current.dataset_metadata
+        mp_dict["metadata_version"] = current.metadata_version
+        mp_dict["table_meta"] = current.table_meta
+        mp_dict["partition_keys"] = current.partition_keys
+        mp_dict["logical_conjunction"] = current.logical_conjunction
+        self.position += 1
+        return MetaPartition.from_dict(mp_dict)
 
     next = __next__  # Python 2
 
@@ -310,7 +308,7 @@ class MetaPartition(Iterable):
                 if df is not None:
                     self.table_meta[table] = make_meta(
                         df,
-                        origin="{}/{}".format(table, label),
+                        origin=f"{table}/{label}",
                         partition_keys=partition_keys,
                     )
         indices = indices or {}
@@ -334,7 +332,7 @@ class MetaPartition(Iterable):
 
     def __repr__(self):
         if len(self.metapartitions) > 1:
-            label = "NESTED ({})".format(len(self.metapartitions))
+            label = f"NESTED ({len(self.metapartitions)})"
         else:
             label = self.label
         return "<{_class} v{version} | {label} | tables {tables} >".format(
@@ -354,7 +352,7 @@ class MetaPartition(Iterable):
         for mp in self:
             if mp.label == label:
                 return mp
-        raise KeyError("Metapartition doesn't contain partition `{}`".format(label))
+        raise KeyError(f"Metapartition doesn't contain partition `{label}`")
 
     @property
     def data(self):
@@ -428,16 +426,13 @@ class MetaPartition(Iterable):
         # Since the label is unique, this can be used as a distinguishing key to sort and compare
         # the nested metapartitions.
         if len(self.metapartitions) > 1:
-            for mp_self, mp_other in zip(
-                sorted(self.metapartitions, key=lambda x: x["label"]),
-                sorted(other.metapartitions, key=lambda x: x["label"]),
-            ):
-                if mp_self == mp_other:
-                    continue
-                # If a single metapartition does not match, the whole object is considered different
-                return False
-            return True
-
+            return all(
+                mp_self == mp_other
+                for mp_self, mp_other in zip(
+                    sorted(self.metapartitions, key=lambda x: x["label"]),
+                    sorted(other.metapartitions, key=lambda x: x["label"]),
+                )
+            )
         # This is unnested only
 
         self_keys = set(self.data.keys())
@@ -451,11 +446,7 @@ class MetaPartition(Iterable):
         if self.files != other.files:
             return False
 
-        for label, df in self.data.items():
-            if not (df.equals(other.data[label])):
-                return False
-
-        return True
+        return all((df.equals(other.data[label])) for label, df in self.data.items())
 
     @staticmethod
     @deprecate_parameters_if_set(
@@ -556,7 +547,7 @@ class MetaPartition(Iterable):
         existing_label = [mp_["label"] for mp_ in self.metapartitions]
 
         if any(
-            [mp_["label"] in existing_label for mp_ in metapartition.metapartitions]
+            mp_["label"] in existing_label for mp_ in metapartition.metapartitions
         ):
             raise RuntimeError(
                 "Duplicate labels for nested metapartitions are not allowed!"
@@ -774,12 +765,8 @@ class MetaPartition(Iterable):
         if columns is None:
             columns = {}
         elif set(columns).difference(self.tables):
-            raise (
-                ValueError(
-                    "You are trying to read columns from invalid table(s): {}".format(
-                        set(columns).difference(self.tables)
-                    )
-                )
+            raise ValueError(
+                f"You are trying to read columns from invalid table(s): {set(columns).difference(self.tables)}"
             )
 
         if categoricals is None:
@@ -803,11 +790,7 @@ class MetaPartition(Iterable):
 
             # In case the columns only refer to the partition indices, we need to load at least a single column to
             # determine the length of the required dataframe.
-            if table_columns is None:
-                table_columns_to_io = None
-            else:
-                table_columns_to_io = table_columns
-
+            table_columns_to_io = None if table_columns is None else table_columns
             filtered_predicates = predicates
 
             self._load_table_meta(dataset_uuid=dataset_uuid, table=table, store=store)
@@ -866,16 +849,9 @@ class MetaPartition(Iterable):
 
             df.columns = df.columns.map(ensure_string_type)
             if table_columns is not None:
-                # TODO: When the write-path ensures that all partitions have the same column set, this check can be
-                #       moved before `DataFrameSerializer.restore_dataframe`. At the position of the current check we
-                #       may want to double check the columns of the loaded DF and raise an exception indicating an
-                #       inconsistent dataset state instead.
-                missing_cols = set(table_columns).difference(df.columns)
-                if missing_cols:
+                if missing_cols := set(table_columns).difference(df.columns):
                     raise ValueError(
-                        "Columns cannot be found in stored dataframe: {}".format(
-                            ", ".join(sorted(missing_cols))
-                        )
+                        f'Columns cannot be found in stored dataframe: {", ".join(sorted(missing_cols))}'
                     )
 
                 if list(df.columns) != table_columns:
@@ -961,20 +937,12 @@ class MetaPartition(Iterable):
                 else:
                     value = dtype.type(value)
             else:
-                raise RuntimeError(
-                    "Unexepected object encountered: ({}, {})".format(
-                        dtype, type(dtype)
-                    )
-                )
+                raise RuntimeError(f"Unexepected object encountered: ({dtype}, {type(dtype)})")
             if categories and primary_key in categories:
-                if convert_to_date:
-                    cats = pd.Series(value).dt.date
-                else:
-                    cats = [value]
+                cats = pd.Series(value).dt.date if convert_to_date else [value]
                 value = pd.Categorical.from_codes(zeros, categories=cats)
-            else:
-                if convert_to_date:
-                    value = pd.Timestamp(value).to_pydatetime().date()
+            elif convert_to_date:
+                value = pd.Timestamp(value).to_pydatetime().date()
             df.insert(pos, primary_key, value)
 
         return df
@@ -1058,7 +1026,7 @@ class MetaPartition(Iterable):
         del new_table_meta[right]
         new_table_meta[output_label] = make_meta(
             df_merged,
-            origin="{}/{}".format(output_label, self.label),
+            origin=f"{output_label}/{self.label}",
             partition_keys=self.partition_keys,
         )
         return self.copy(files={}, data=new_data, table_meta=new_table_meta)
@@ -1162,14 +1130,11 @@ class MetaPartition(Iterable):
                         )
                     else:
                         LOGGER.error("Storage of dask dataframe failed.")
-                        pass
                 finally:
                     raise
             LOGGER.debug("Storage of dataframe for table `%s` successful", table)
 
-        new_metapartition = self.copy(files=file_dct, data={})
-
-        return new_metapartition
+        return self.copy(files=file_dct, data={})
 
     @_apply_to_list
     def concat_dataframes(self):
@@ -1196,7 +1161,7 @@ class MetaPartition(Iterable):
             count_cols[key].append((label, df))
         is_modified = False
         new_data = {}
-        for _, tuple_list in count_cols.items():
+        for tuple_list in count_cols.values():
             if len(tuple_list) > 1:
                 is_modified = True
                 data = [x[1] for x in tuple_list]
@@ -1208,7 +1173,7 @@ class MetaPartition(Iterable):
         new_table_meta = {
             label: make_meta(
                 df,
-                origin="{}/{}".format(self.label, label),
+                origin=f"{self.label}/{label}",
                 partition_keys=self.partition_keys,
             )
             for (label, df) in new_data.items()
@@ -1277,7 +1242,7 @@ class MetaPartition(Iterable):
             new_table_meta = {
                 table: make_meta(
                     df,
-                    origin="{}/{}".format(self.label, table),
+                    origin=f"{self.label}/{table}",
                     partition_keys=self.partition_keys,
                 )
                 for table, df in new_data.items()
@@ -1402,11 +1367,11 @@ class MetaPartition(Iterable):
 
             # There is at least one table with this column (see check above), so we can get the dtype from there. Also,
             # shared dtypes are ensured to be compatible.
-            dtype = list(
+            dtype = [
                 meta.field(col).type
                 for meta in self.table_meta.values()
                 if col in meta.names
-            )[0]
+            ][0]
             new_index = ExplicitSecondaryIndex(
                 column=col,
                 index_dct={value: [self.label] for value in possible_values},
@@ -1489,9 +1454,9 @@ class MetaPartition(Iterable):
                 metadata_version=self.metadata_version,
                 indices={},
                 table_meta={
-                    table: normalize_column_order(schema, partition_on).with_origin(
-                        "{}/{}".format(table, label)
-                    )
+                    table: normalize_column_order(
+                        schema, partition_on
+                    ).with_origin(f"{table}/{label}")
                     for table, schema in self.table_meta.items()
                 },
                 partition_keys=partition_on,
@@ -1504,26 +1469,18 @@ class MetaPartition(Iterable):
     def _ensure_compatible_partitioning(self, partition_on):
         if (
             not self.partition_keys
-            or self.partition_keys
-            and (len(partition_on) >= len(self.partition_keys))
-            and (self.partition_keys == partition_on[: len(self.partition_keys)])
+            or len(partition_on) >= len(self.partition_keys)
+            and self.partition_keys == partition_on[: len(self.partition_keys)]
         ):
             return partition_on[len(self.partition_keys) :]
         else:
             raise ValueError(
-                "Incompatible partitioning encountered. `partition_on` needs to include the already "
-                "existing partition keys and must preserve their order.\n"
-                "Current partition keys: `{}`\n"
-                "Partition on called with: `{}`".format(
-                    self.partition_keys, partition_on
-                )
+                f"Incompatible partitioning encountered. `partition_on` needs to include the already existing partition keys and must preserve their order.\nCurrent partition keys: `{self.partition_keys}`\nPartition on called with: `{partition_on}`"
             )
 
     def _partition_data(self, partition_on):
-        existing_indices, base_label = decode_key("uuid/table/{}".format(self.label))[
-            2:
-        ]
-        dct = dict()
+        existing_indices, base_label = decode_key(f"uuid/table/{self.label}")[2:]
+        dct = {}
         empty_tables = []
 
         for table, df in self.data.items():
@@ -1537,14 +1494,11 @@ class MetaPartition(Iterable):
 
             # column sanity checks
             data_cols = set(df.columns).difference(partition_on)
-            missing_po_cols = set(partition_on).difference(df.columns)
-            if missing_po_cols:
+            if missing_po_cols := set(partition_on).difference(df.columns):
                 raise ValueError(
-                    "Partition column(s) missing: {}".format(
-                        ", ".join(sorted(missing_po_cols))
-                    )
+                    f'Partition column(s) missing: {", ".join(sorted(missing_po_cols))}'
                 )
-            if len(data_cols) == 0:
+            if not data_cols:
                 raise ValueError("No data left to save outside partition columns")
 
             # To be aligned with open source tooling we drop the index columns and recreate
@@ -1578,7 +1532,7 @@ class MetaPartition(Iterable):
                     f"Hint: you may see this if you are trying to use `partition_on` on a column with null values."
                 )
 
-        for label, table_dct in dct.items():
+        for table_dct in dct.values():
             for empty_table, df in empty_tables:
                 if empty_table not in table_dct:
                     table_dct[empty_table] = df.drop(labels=partition_on, axis=1)
@@ -1589,9 +1543,7 @@ class MetaPartition(Iterable):
     def merge_indices(metapartitions):
         list_of_indices = []
         for mp in metapartitions:
-            for sub_mp in mp:
-                if sub_mp.indices:
-                    list_of_indices.append(sub_mp.indices)
+            list_of_indices.extend(sub_mp.indices for sub_mp in mp if sub_mp.indices)
         return merge_indices_algo(list_of_indices)
 
     @staticmethod
@@ -1616,9 +1568,7 @@ class MetaPartition(Iterable):
         if metadata_merger is None:
             metadata_merger = combine_metadata
 
-        new_ds_meta = metadata_merger([mp.dataset_metadata for mp in metapartitions])
-
-        return new_ds_meta
+        return metadata_merger([mp.dataset_metadata for mp in metapartitions])
 
     @staticmethod
     def merge_metapartitions(metapartitions, label_merger=None, metadata_merger=None):
@@ -1645,21 +1595,19 @@ class MetaPartition(Iterable):
                 new_data[label] = data[label][0]
             else:
                 for ix, idf in enumerate(data[label]):
-                    new_label = "{}_{}".format(label, ix)
+                    new_label = f"{label}_{ix}"
                     new_data[new_label] = idf
 
         new_label = MetaPartition._merge_labels(metapartitions, label_merger)
         new_ds_meta = MetaPartition._merge_metadata(metapartitions, metadata_merger)
 
-        new_mp = MetaPartition(
+        return MetaPartition(
             label=new_label,
             data=new_data,
             dataset_metadata=new_ds_meta,
             metadata_version=new_metadata_version,
             logical_conjunction=logical_conjunction,
         )
-
-        return new_mp
 
     @staticmethod
     def concat_metapartitions(metapartitions, label_merger=None, metadata_merger=None):
@@ -1696,7 +1644,7 @@ class MetaPartition(Iterable):
         new_label = MetaPartition._merge_labels(metapartitions, label_merger)
         new_ds_meta = MetaPartition._merge_metadata(metapartitions, metadata_merger)
 
-        new_mp = MetaPartition(
+        return MetaPartition(
             label=new_label,
             data=new_data,
             dataset_metadata=new_ds_meta,
@@ -1704,8 +1652,6 @@ class MetaPartition(Iterable):
             table_meta=new_schema,
             partition_keys=partition_keys,
         )
-
-        return new_mp
 
     @_apply_to_list
     def delete_from_store(
@@ -1788,12 +1734,13 @@ def partition_labels_from_mps(mps: List[MetaPartition]) -> List[str]:
     partition_labels = []
     for mp in mps:
         if len(mp) > 1:
-            for nested_mp in mp:
-                if not nested_mp.is_sentinel:
-                    partition_labels.append(nested_mp.label)
-        else:
-            if not mp.is_sentinel:
-                partition_labels.append(mp.label)
+            partition_labels.extend(
+                nested_mp.label
+                for nested_mp in mp
+                if not nested_mp.is_sentinel
+            )
+        elif not mp.is_sentinel:
+            partition_labels.append(mp.label)
     return partition_labels
 
 

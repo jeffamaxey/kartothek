@@ -46,26 +46,24 @@ def get_datasets_to_copy(
     all_datasets: Dict[str, DatasetMetadata]
         All datasets that should be copied.
     """
-    if not isinstance(datasets, dict):
-        new_datasets = discover_datasets_unchecked(
+    new_datasets = (
+        datasets
+        if isinstance(datasets, dict)
+        else discover_datasets_unchecked(
             uuid_prefix=cube.uuid_prefix,
             store=src_store,
             filter_ktk_cube_dataset_ids=datasets,
         )
-    else:
-        new_datasets = datasets
-
+    )
     if datasets is None:
         if not new_datasets:
-            raise RuntimeError("{} not found in source store".format(cube))
-    else:
-        unknown_datasets = set(datasets) - set(new_datasets)
-        if unknown_datasets:
-            raise RuntimeError(
-                "{cube}, datasets {datasets} do not exist in source store".format(
-                    cube=cube, datasets=unknown_datasets
-                )
+            raise RuntimeError(f"{cube} not found in source store")
+    elif unknown_datasets := set(datasets) - set(new_datasets):
+        raise RuntimeError(
+            "{cube}, datasets {datasets} do not exist in source store".format(
+                cube=cube, datasets=unknown_datasets
             )
+        )
 
     existing_datasets = discover_datasets_unchecked(cube.uuid_prefix, tgt_store)
 

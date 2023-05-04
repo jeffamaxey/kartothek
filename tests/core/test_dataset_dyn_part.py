@@ -42,7 +42,7 @@ def test_index_quote_roundtrip():
 
 def testunquote_indices():
     index_strings = [
-        "{}={}".format(quote("location"), quote("München".encode("utf-8"))),
+        f'{quote("location")}={quote("München".encode("utf-8"))}',
         "{}={}".format(quote("product"), quote("å\\ øß".encode("utf-8"))),
     ]
     indices = unquote_indices(index_strings)
@@ -59,45 +59,45 @@ def test_dynamic_partitions(store):
         dataset_uuid,
         "core",
         [("location", "L-0")],
-        "{}.parquet".format(partition_suffix),
+        f"{partition_suffix}.parquet",
     )
     partition1_core = create_partition_key(
         dataset_uuid,
         "core",
         [("location", "L-1")],
-        "{}.parquet".format(partition_suffix),
+        f"{partition_suffix}.parquet",
     )
     partition0_ext = create_partition_key(
         dataset_uuid,
         "extension",
         [("location", "L-0")],
-        "{}.parquet".format(partition_suffix),
+        f"{partition_suffix}.parquet",
     )
     partition1_ext = create_partition_key(
         dataset_uuid,
         "extension",
         [("location", "L-1")],
-        "{}.parquet".format(partition_suffix),
+        f"{partition_suffix}.parquet",
     )
     metadata = {"dataset_metadata_version": 4, "dataset_uuid": dataset_uuid}
     expected_partitions = {
-        "location=L-0/{}".format(partition_suffix): {
+        f"location=L-0/{partition_suffix}": {
             "files": {"core": partition0_core, "extension": partition0_ext}
         },
-        "location=L-1/{}".format(partition_suffix): {
+        f"location=L-1/{partition_suffix}": {
             "files": {"core": partition1_core, "extension": partition1_ext}
         },
     }
     expected_indices = {
         "location": {
-            "L-0": ["location=L-0/{}".format(partition_suffix)],
-            "L-1": ["location=L-1/{}".format(partition_suffix)],
+            "L-0": [f"location=L-0/{partition_suffix}"],
+            "L-1": [f"location=L-1/{partition_suffix}"],
         }
     }
 
     # put two partitions for two tables each to store
     store.put(
-        "{}{}.json".format(dataset_uuid, naming.METADATA_BASE_SUFFIX),
+        f"{dataset_uuid}{naming.METADATA_BASE_SUFFIX}.json",
         simplejson.dumps(metadata).encode("utf-8"),
     )
     store.put(partition0_core, b"test")
@@ -106,7 +106,7 @@ def test_dynamic_partitions(store):
     store.put(partition1_ext, b"test")
     store_schema_metadata(
         make_meta(
-            pd.DataFrame({"location": ["L-0/{}".format(partition_suffix)]}),
+            pd.DataFrame({"location": [f"L-0/{partition_suffix}"]}),
             origin="stored",
         ),
         dataset_uuid,
@@ -157,32 +157,32 @@ def test_dynamic_partitions_multiple_indices(store):
         dataset_uuid,
         "core",
         [("location", "L-0"), ("product", "P-0")],
-        "{}.parquet".format(suffix),
+        f"{suffix}.parquet",
     )
     partition1_core = create_partition_key(
         dataset_uuid,
         "core",
         [("location", "L-1"), ("product", "P-0")],
-        "{}.parquet".format(suffix),
+        f"{suffix}.parquet",
     )
     metadata = {"dataset_metadata_version": 4, "dataset_uuid": dataset_uuid}
     expected_partitions = {
-        "location=L-0/product=P-0/{}".format(suffix): {
+        f"location=L-0/product=P-0/{suffix}": {
             "files": {"core": partition0_core}
         },
-        "location=L-1/product=P-0/{}".format(suffix): {
+        f"location=L-1/product=P-0/{suffix}": {
             "files": {"core": partition1_core}
         },
     }
     expected_indices = {
         "location": {
-            "L-0": ["location=L-0/product=P-0/{}".format(suffix)],
-            "L-1": ["location=L-1/product=P-0/{}".format(suffix)],
+            "L-0": [f"location=L-0/product=P-0/{suffix}"],
+            "L-1": [f"location=L-1/product=P-0/{suffix}"],
         },
         "product": {
             "P-0": [
-                "location=L-0/product=P-0/{}".format(suffix),
-                "location=L-1/product=P-0/{}".format(suffix),
+                f"location=L-0/product=P-0/{suffix}",
+                f"location=L-1/product=P-0/{suffix}",
             ]
         },
     }
@@ -219,32 +219,32 @@ def test_dynamic_partitions_with_garbage(store):
         dataset_uuid,
         "core",
         [("location", "L-0"), ("product", "P-0")],
-        "{}.parquet".format(partition_suffix),
+        f"{partition_suffix}.parquet",
     )
     partition1_core = create_partition_key(
         dataset_uuid,
         "core",
         [("location", "L-1"), ("product", "P-0")],
-        "{}.parquet".format(partition_suffix),
+        f"{partition_suffix}.parquet",
     )
     metadata = {"dataset_metadata_version": 4, "dataset_uuid": dataset_uuid}
     expected_partitions = {
-        "location=L-0/product=P-0/{}".format(partition_suffix): {
+        f"location=L-0/product=P-0/{partition_suffix}": {
             "files": {"core": partition0_core}
         },
-        "location=L-1/product=P-0/{}".format(partition_suffix): {
+        f"location=L-1/product=P-0/{partition_suffix}": {
             "files": {"core": partition1_core}
         },
     }
     expected_indices = {
         "location": {
-            "L-0": ["location=L-0/product=P-0/{}".format(partition_suffix)],
-            "L-1": ["location=L-1/product=P-0/{}".format(partition_suffix)],
+            "L-0": [f"location=L-0/product=P-0/{partition_suffix}"],
+            "L-1": [f"location=L-1/product=P-0/{partition_suffix}"],
         },
         "product": {
             "P-0": [
-                "location=L-0/product=P-0/{}".format(partition_suffix),
-                "location=L-1/product=P-0/{}".format(partition_suffix),
+                f"location=L-0/product=P-0/{partition_suffix}",
+                f"location=L-1/product=P-0/{partition_suffix}",
             ]
         },
     }
@@ -260,18 +260,11 @@ def test_dynamic_partitions_with_garbage(store):
 
     # the following files are garbage and should not interfere with the indices and/or partitions
     for suffix in ["", ".json", ".msgpack", ".my_own_file_format"]:
-        store.put("this_should_not_exist{}".format(suffix), b"ignore me")
+        store.put(f"this_should_not_exist{suffix}", b"ignore me")
+        store.put(f"{dataset_uuid}/this_should_not_exist{suffix}", b"ignore me")
+        store.put(f"{dataset_uuid}/core/this_should_not_exist{suffix}", b"ignore me")
         store.put(
-            "{}/this_should_not_exist{}".format(dataset_uuid, suffix), b"ignore me"
-        )
-        store.put(
-            "{}/{}/this_should_not_exist{}".format(dataset_uuid, "core", suffix),
-            b"ignore me",
-        )
-        store.put(
-            "{}/{}/location=L-0/this_should_not_exist{}".format(
-                dataset_uuid, "core", suffix
-            ),
+            f"{dataset_uuid}/core/location=L-0/this_should_not_exist{suffix}",
             b"ignore me",
         )
 
@@ -340,12 +333,12 @@ def test_dask_partitions(metadata_version):
 
     bucket_dir = tempfile.mkdtemp()
     dataset_uuid = "uuid+namespace-attribute12_underscored"
-    os.mkdir("{}/{}".format(bucket_dir, dataset_uuid))
-    table_dir = "{}/{}/core".format(bucket_dir, dataset_uuid)
+    os.mkdir(f"{bucket_dir}/{dataset_uuid}")
+    table_dir = f"{bucket_dir}/{dataset_uuid}/core"
     os.mkdir(table_dir)
-    store = storefact.get_store_from_url("hfs://{}".format(bucket_dir))
+    store = storefact.get_store_from_url(f"hfs://{bucket_dir}")
 
-    locations = ["L-{}".format(i) for i in range(2)]
+    locations = [f"L-{i}" for i in range(2)]
     df = pd.DataFrame()
     for location in locations:
         core = pd.DataFrame(
@@ -363,8 +356,8 @@ def test_dask_partitions(metadata_version):
     ddf = dask.dataframe.from_pandas(df, npartitions=1)
     dask.dataframe.to_parquet(ddf, table_dir, partition_on=["location"])
 
-    partition0 = "{}/core/location=L-0/part.0.parquet".format(dataset_uuid)
-    partition1 = "{}/core/location=L-1/part.0.parquet".format(dataset_uuid)
+    partition0 = f"{dataset_uuid}/core/location=L-0/part.0.parquet"
+    partition1 = f"{dataset_uuid}/core/location=L-1/part.0.parquet"
     metadata = {
         "dataset_metadata_version": metadata_version,
         "dataset_uuid": dataset_uuid,
@@ -378,12 +371,12 @@ def test_dask_partitions(metadata_version):
     expected_tables = {"tables": {"core": ["date", "product", "value"]}}
 
     store.put(
-        "{}.by-dataset-metadata.json".format(dataset_uuid),
+        f"{dataset_uuid}.by-dataset-metadata.json",
         simplejson.dumps(metadata).encode(),
     )
 
-    metadata.update(expected_partitions)
-    metadata.update(expected_tables)
+    metadata |= expected_partitions
+    metadata |= expected_tables
     dmd = DatasetMetadata.load_from_store(dataset_uuid, store)
     actual_partitions = dmd.to_dict()["partitions"]
     # we partition on location ID which has two values
@@ -396,9 +389,9 @@ def test_overlap_keyspace(store, metadata_version):
     dataset_uuid2 = "uuid+namespace-attribute12_underscored_ext"
     table = "core"
 
+    partition0 = "location=L-0"
     for dataset_uuid in (dataset_uuid1, dataset_uuid2):
-        partition0 = "location=L-0"
-        partition0_key = "{}/{}/{}/data.parquet".format(dataset_uuid, table, partition0)
+        partition0_key = f"{dataset_uuid}/{table}/{partition0}/data.parquet"
         metadata = {
             "dataset_metadata_version": metadata_version,
             "dataset_uuid": dataset_uuid,
@@ -406,7 +399,7 @@ def test_overlap_keyspace(store, metadata_version):
 
         # put two partitions for two tables each to store
         store.put(
-            "{}{}.json".format(dataset_uuid, naming.METADATA_BASE_SUFFIX),
+            f"{dataset_uuid}{naming.METADATA_BASE_SUFFIX}.json",
             simplejson.dumps(metadata).encode("utf-8"),
         )
         store.put(partition0_key, b"test")
@@ -417,15 +410,13 @@ def test_overlap_keyspace(store, metadata_version):
             "core",
         )
 
+    partition0_label = "location=L-0/data"
     for dataset_uuid in (dataset_uuid1, dataset_uuid2):
-        partition0_label = "location=L-0/data"
-        partition0_key = "{}/{}/{}.parquet".format(
-            dataset_uuid, table, partition0_label
-        )
+        partition0_key = f"{dataset_uuid}/{table}/{partition0_label}.parquet"
         expected_partitions = {"location=L-0/data": {"files": {"core": partition0_key}}}
         expected_indices = {"location": {"L-0": ["location=L-0/data"]}}
         assert DatasetMetadata.storage_keys(dataset_uuid, store) == [
-            "{}{}.json".format(dataset_uuid, naming.METADATA_BASE_SUFFIX),
+            f"{dataset_uuid}{naming.METADATA_BASE_SUFFIX}.json",
             _get_common_metadata_key(dataset_uuid, "core"),
             partition0_key,
         ]

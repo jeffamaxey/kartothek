@@ -187,17 +187,15 @@ def test_commit_dataset_from_nested_metapartition(store):
         partition_on=["a"],
     )
 
-    partitions = []
-    for x in range(2):
-        partitions.append(
-            write_single_partition(
-                store=store,
-                dataset_uuid="uuid",
-                data={"data": {"table": df}},
-                partition_on=["a"],
-            )
+    partitions = [
+        write_single_partition(
+            store=store,
+            dataset_uuid="uuid",
+            data={"data": {"table": df}},
+            partition_on=["a"],
         )
-
+        for _ in range(2)
+    ]
     partition_labels = {mp_.label for mp in partitions for mp_ in mp}
     dm = commit_dataset(
         store=store, dataset_uuid="uuid", new_partitions=partitions, partition_on=["a"]

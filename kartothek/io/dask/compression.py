@@ -89,14 +89,7 @@ def pack_payload(df: dd.DataFrame, group_key: Union[List[str], str]) -> dd.DataF
 
     """
 
-    if (
-        # https://github.com/pandas-dev/pandas/issues/34455
-        isinstance(df._meta.index, pd.Float64Index)
-        # TODO: Try to find out what's going on an file a bug report
-        # For datetime indices the apply seems to be corrupt
-        # s.t. apply(lambda x:x) returns different values
-        or isinstance(df._meta.index, pd.DatetimeIndex)
-    ):
+    if isinstance(df._meta.index, (pd.Float64Index, pd.DatetimeIndex)):
         return df
     if not HAS_DISTRIBUTED:
         _logger.warning(
@@ -141,14 +134,7 @@ def unpack_payload_pandas(
 def unpack_payload(df: dd.DataFrame, unpack_meta: pd.DataFrame) -> dd.DataFrame:
     """Revert payload packing of ``pack_payload`` and restores full dataframe."""
 
-    if (
-        # https://github.com/pandas-dev/pandas/issues/34455
-        isinstance(df._meta.index, pd.Float64Index)
-        # TODO: Try to find out what's going on an file a bug report
-        # For datetime indices the apply seems to be corrupt
-        # s.t. apply(lambda x:x) returns different values
-        or isinstance(df._meta.index, pd.DatetimeIndex)
-    ):
+    if isinstance(df._meta.index, (pd.Float64Index, pd.DatetimeIndex)):
         return df
 
     if not HAS_DISTRIBUTED:

@@ -8,8 +8,7 @@ from sphinx.ext.intersphinx import missing_reference
 
 def replace_target_intersphinx(app, env, node, contnode):
     reftarget_replace = app.config.reftarget_replace
-    target = node.get("reftarget", None)
-    if target:
+    if target := node.get("reftarget", None):
         for old, new in reftarget_replace.items():
             node["reftarget"] = target.replace(old, new)
     return missing_reference(app, env, node, contnode)
@@ -21,8 +20,7 @@ def replace_target(app, doctree):
 
     for node in pending_xrefs:
         for old, new in reftarget_replace.items():
-            target = node.get("reftarget")
-            if target:
+            if target := node.get("reftarget"):
                 new_target = target.replace(old, new)
                 node["reftarget"] = new_target
 

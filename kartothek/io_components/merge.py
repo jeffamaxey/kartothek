@@ -122,7 +122,6 @@ def align_datasets(
         available_partitions = partition_stack[:]
         if len(res) == 1:
             raise RuntimeError(
-                "No matching partition for {} in dataset {} "
-                "found".format(p_1, first_dataset)
+                f"No matching partition for {p_1} in dataset {first_dataset} found"
             )
         yield res

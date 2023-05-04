@@ -22,7 +22,7 @@ def info(ctx):
     seed_schema = seed_ds.table_meta[SINGLE_TABLE]
 
     click.echo(h("Infos"))
-    click.echo(b("UUID Prefix:") + "        {}".format(cube.uuid_prefix))
+    click.echo(b("UUID Prefix:") + f"        {cube.uuid_prefix}")
     click.echo(
         b("Dimension Columns:") + _collist_string(cube.dimension_columns, seed_schema)
     )
@@ -30,7 +30,7 @@ def info(ctx):
         b("Partition Columns:") + _collist_string(cube.partition_columns, seed_schema)
     )
     click.echo(b("Index Columns:") + _collist_string_index(cube, datasets))
-    click.echo(b("Seed Dataset:") + "      {}".format(cube.seed_dataset))
+    click.echo(b("Seed Dataset:") + f"      {cube.seed_dataset}")
 
     for ktk_cube_dataset_id in sorted(datasets.keys()):
         _info_dataset(ktk_cube_dataset_id, datasets[ktk_cube_dataset_id], cube)
@@ -38,7 +38,7 @@ def info(ctx):
 
 def _info_dataset(ktk_cube_dataset_id, ds, cube):
     click.echo("")
-    click.echo(h("Dataset: {}".format(ktk_cube_dataset_id)))
+    click.echo(h(f"Dataset: {ktk_cube_dataset_id}"))
 
     ds = ds.load_partition_indices()
     schema = ds.table_meta[SINGLE_TABLE]
@@ -50,16 +50,21 @@ def _info_dataset(ktk_cube_dataset_id, ds, cube):
 
     click.echo(b("Partition Keys:") + _collist_string(ds.partition_keys, schema))
 
-    click.echo(b("Partitions:") + " {}".format(len(ds.partitions)))
+    click.echo(b("Partitions:") + f" {len(ds.partitions)}")
 
     click.echo(
-        b("Metadata:")
-        + "\n{}".format(
-            "\n".join(
-                "  {}".format(line)
-                for line in json.dumps(
-                    ds.metadata, indent=2, sort_keys=True, separators=(",", ": ")
-                ).split("\n")
+        (
+            b("Metadata:")
+            + "\n{}".format(
+                "\n".join(
+                    f"  {line}"
+                    for line in json.dumps(
+                        ds.metadata,
+                        indent=2,
+                        sort_keys=True,
+                        separators=(",", ": "),
+                    ).split("\n")
+                )
             )
         )
     )

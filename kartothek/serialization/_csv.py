@@ -59,11 +59,7 @@ class CsvSerializer(DataFrameSerializer):
             project_to_no_cols = False
 
         dtype: Optional[Dict[str, str]]
-        if categories:
-            dtype = {cat: "category" for cat in categories}
-        else:
-            dtype = None
-
+        dtype = {cat: "category" for cat in categories} if categories else None
         try:
             df = pd.read_csv(
                 BytesIO(store.get(key)),
@@ -89,7 +85,7 @@ class CsvSerializer(DataFrameSerializer):
     def store(self, store, key_prefix, df):
         if isinstance(df, pa.Table):
             df = df.to_pandas()
-        key = "{}.csv".format(key_prefix)
+        key = f"{key_prefix}.csv"
         result_stream = BytesIO()
         if self.compress:
             iostream = gzip.GzipFile(fileobj=result_stream, mode="wb")

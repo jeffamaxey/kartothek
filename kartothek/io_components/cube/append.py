@@ -22,10 +22,9 @@ def check_existing_datasets(
     ------
     ValueError: In case a dataset does not exist yet.
     """
-    unknown_datasets = set(ktk_cube_dataset_ids) - set(existing_datasets.keys())
-    if unknown_datasets:
+    if unknown_datasets := set(ktk_cube_dataset_ids) - set(
+        existing_datasets.keys()
+    ):
         raise ValueError(
-            "Unknown / non-existing datasets: {}".format(
-                ", ".join(sorted(unknown_datasets))
-            )
+            f'Unknown / non-existing datasets: {", ".join(sorted(unknown_datasets))}'
         )

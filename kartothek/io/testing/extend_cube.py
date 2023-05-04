@@ -261,7 +261,7 @@ def test_fails_overlapping_payload_partial(driver, function_store, existing_cube
     post_keys = set(function_store().keys())
     extra_keys = post_keys - pre_keys
     extra1_keys = {k for k in extra_keys if "extra1" in k}
-    assert extra1_keys == set()
+    assert not extra1_keys
 
 
 def test_fails_overlapping_payload_overwrite(driver, function_store, existing_cube):

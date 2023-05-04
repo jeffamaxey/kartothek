@@ -151,18 +151,13 @@ def read_dataset_as_metapartitions_bag(
             predicates=predicates,
         )
 
-    categoricals_from_index = _maybe_get_categoricals_from_index(
+    if categoricals_from_index := _maybe_get_categoricals_from_index(
         ds_factory, categoricals
-    )
-
-    if categoricals_from_index:
-        func_dict = defaultdict(_identity)
-        func_dict.update(
-            {
-                table: partial(_cast_categorical_to_index_cat, categories=cats)
-                for table, cats in categoricals_from_index.items()
-            }
-        )
+    ):
+        func_dict = defaultdict(_identity) | {
+            table: partial(_cast_categorical_to_index_cat, categories=cats)
+            for table, cats in categoricals_from_index.items()
+        }
         mps = mps.map(MetaPartition.apply, func_dict, type_safe=True)
     return mps
 

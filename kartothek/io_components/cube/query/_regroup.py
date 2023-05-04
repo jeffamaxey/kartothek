@@ -32,7 +32,7 @@ def _labels_col(ktk_cube_dataset_id):
     labels_col: str
         Column name.
     """
-    return "__ktk_cube_labels_{}".format(ktk_cube_dataset_id)
+    return f"__ktk_cube_labels_{ktk_cube_dataset_id}"
 
 
 def _aligned_df_to_label2gp(df, datasets, group_id, label2gp):
@@ -372,9 +372,7 @@ def regroup(
     for group_id in sorted(groups.keys()):
         # strip defaultdicts here
         metapartitions = {
-            partition_id: {
-                ktk_cube_dataset_id: mps for ktk_cube_dataset_id, mps in sub.items()
-            }
+            partition_id: dict(sub.items())
             for partition_id, sub in groups[group_id].items()
         }
         predicates = {

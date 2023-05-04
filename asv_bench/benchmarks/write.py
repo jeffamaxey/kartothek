@@ -59,7 +59,7 @@ class TimeStoreDataset(AsvBenchmarkConfig):
     param_names = ["num_partitions", "max_depth", "num_leafs"]
 
     def setup(self, num_partitions, max_depth, num_leafs):
-        self.store = get_store_from_url("hfs://{}".format(tempfile.mkdtemp()))
+        self.store = get_store_from_url(f"hfs://{tempfile.mkdtemp()}")
         dataset_metadata = generate_metadata(max_depth, num_leafs)
         self.partitions = [generate_mp(dataset_metadata) for _ in range(num_partitions)]
         self.dataset_uuid = "dataset_uuid"
@@ -79,7 +79,7 @@ class TimePersistMetadata(AsvBenchmarkConfig):
     params = [1, 10 ** 2, 10 ** 3]
 
     def setup(self, num_partitions):
-        self.store = get_store_from_url("hfs://{}".format(tempfile.mkdtemp()))
+        self.store = get_store_from_url(f"hfs://{tempfile.mkdtemp()}")
         self.partitions = [generate_mp() for _ in range(num_partitions)]
         self.dataset_uuid = "dataset_uuid"
 

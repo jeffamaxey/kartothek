@@ -217,10 +217,7 @@ def test_validate_compatible_other_pandas(df_all_types, remove_metadata, ignore_
         pandas_metadata["pandas_version"] = version
         metadata[b"pandas"] = simplejson.dumps(pandas_metadata).encode("utf8")
         schema = SchemaWrapper(pa.schema(schema, metadata), version)
-        if remove_metadata:
-            return schema.remove_metadata()
-        else:
-            return schema
+        return schema.remove_metadata() if remove_metadata else schema
 
     schema1 = make_meta(df_all_types, origin="all")
     schema2 = _with_pandas("0.19.0")
@@ -275,7 +272,7 @@ def test_validate_shared_columns_null_value(df_all_types):
 
 
 def test_validate_shared_columns_no_share(df_all_types):
-    schema1 = make_meta(df_all_types.loc[:, df_all_types.columns[0:2]], origin="1")
+    schema1 = make_meta(df_all_types.loc[:, df_all_types.columns[:2]], origin="1")
     schema2 = make_meta(df_all_types.loc[:, df_all_types.columns[2:4]], origin="2")
     schema3 = make_meta(df_all_types.loc[:, df_all_types.columns[4:6]], origin="3")
     validate_shared_columns([])

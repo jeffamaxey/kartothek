@@ -53,10 +53,7 @@ def wrap_bag_read(f, blocksize):
         b = pickle_roundtrip(b)
 
         result = b.compute()
-        if not isinstance(result, list):
-            return [result]
-        else:
-            return result
+        return result if isinstance(result, list) else [result]
 
     return _driver
 

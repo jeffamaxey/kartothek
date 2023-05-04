@@ -213,17 +213,15 @@ def load_group(group, store, cube):
     if callable(store):
         store = store()
 
-    partition_results = []
-    for partition_id in sorted(group.metapartitions.keys()):
-        partition_results.append(
-            _load_partition(
-                cube=cube,
-                group=group,
-                partition_mps=group.metapartitions[partition_id],
-                store=store,
-            )
+    partition_results = [
+        _load_partition(
+            cube=cube,
+            group=group,
+            partition_mps=group.metapartitions[partition_id],
+            store=store,
         )
-
+        for partition_id in sorted(group.metapartitions.keys())
+    ]
     # concat all partitions
     return quick_concat(
         dfs=partition_results,

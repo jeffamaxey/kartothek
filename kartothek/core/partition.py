@@ -27,11 +27,7 @@ class Partition:
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Partition):
             return False
-        if self.label != other.label:
-            return False
-        if self.files != other.files:
-            return False
-        return True
+        return False if self.label != other.label else self.files == other.files
 
     @staticmethod
     def from_dict(label: str, dct: Union[str, PartitionDictType]):

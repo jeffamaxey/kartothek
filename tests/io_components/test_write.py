@@ -32,10 +32,7 @@ def test_store_dataset_from_partitions(meta_partitions_files_only, store, frozen
     assert dataset.uuid == "dataset_uuid"
 
     store_files = list(store.keys())
-    # Dataset metadata: 1 file
-    expected_number_files = 1
-    # common metadata for v4 datasets
-    expected_number_files += 2
+    expected_number_files = 1 + 2
     assert len(store_files) == expected_number_files
 
     # Ensure the dataset can be loaded properly
@@ -83,9 +80,11 @@ def test_store_dataset_from_partitions_update(store, metadata_version, frozen_ti
         remove_partitions=["cluster_1"],
     )
     dataset_updated = dataset_updated.load_index("p", store)
-    expected_metadata = {"dataset": "metadata", "extra": "metadata"}
-
-    expected_metadata["creation_time"] = TIME_TO_FREEZE_ISO
+    expected_metadata = {
+        "dataset": "metadata",
+        "extra": "metadata",
+        "creation_time": TIME_TO_FREEZE_ISO,
+    }
 
     assert dataset_updated.metadata == expected_metadata
     assert list(dataset.partitions) == ["cluster_1", "cluster_2"]
@@ -94,12 +93,7 @@ def test_store_dataset_from_partitions_update(store, metadata_version, frozen_ti
     assert dataset_updated.uuid == "dataset_uuid"
 
     store_files = list(store.keys())
-    # 1 dataset metadata file and 1 index file
-    # note: the update writes a new index file but due to frozen_time this gets
-    # the same name as the previous one and overwrites it.
-    expected_number_files = 2
-    # common metadata for v4 datasets (1 table)
-    expected_number_files += 1
+    expected_number_files = 2 + 1
     assert len(store_files) == expected_number_files
 
     assert dataset.indices["p"].index_dct == {1: ["cluster_1"], 2: ["cluster_2"]}

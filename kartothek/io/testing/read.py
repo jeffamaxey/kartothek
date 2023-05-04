@@ -178,12 +178,7 @@ def _perform_read_test(
 ):
     if not read_kwargs:
         read_kwargs = {}
-    if use_categoricals:
-        # dataset_with_index has an index on L but not on P
-        categoricals = {table_name: ["P", "L"]}
-    else:
-        categoricals = None
-
+    categoricals = {table_name: ["P", "L"]} if use_categoricals else None
     result = execute_read_callable(
         dataset_uuid=dataset_uuid,
         store=store_factory,
@@ -399,10 +394,10 @@ def test_read_dataset_as_dataframes_concat_primary(
 ):
     if output_type != "dataframe":
         pytest.skip()
-    partitions = []
-    for part_info in [["1", "H"], ["1", "G"], ["2", "H"], ["2", "G"]]:
-        partitions.append(_gen_partition(part_info))
-
+    partitions = [
+        _gen_partition(part_info)
+        for part_info in [["1", "H"], ["1", "G"], ["2", "H"], ["2", "G"]]
+    ]
     store_dataframes_as_dataset(
         dfs=partitions,
         store=store_factory,
@@ -473,10 +468,7 @@ def test_read_dataset_as_dataframes_dispatch_by_single_col(
 
     unique_a = set()
     for part in dispatched_a:
-        if isinstance(part, MetaPartition):
-            data = part.data["data"]
-        else:
-            data = part["data"]
+        data = part.data["data"] if isinstance(part, MetaPartition) else part["data"]
         unique_dispatch = data[dispatch_by].unique()
         assert len(unique_dispatch) == 1
         assert unique_dispatch[0] not in unique_a
@@ -536,10 +528,7 @@ def test_read_dataset_as_dataframes_dispatch_by_multi_col(
         )
         uniques = pd.DataFrame(columns=dispatch_by)
         for part in dispatched:
-            if isinstance(part, MetaPartition):
-                data = part.data["data"]
-            else:
-                data = part["data"]
+            data = part.data["data"] if isinstance(part, MetaPartition) else part["data"]
             unique_dispatch = data[list(dispatch_by)].drop_duplicates()
             assert len(unique_dispatch) == 1
             row = unique_dispatch
@@ -637,22 +626,17 @@ def test_read_dataset_alternative_table_name(
         ds_factory = dataset_factory_alternative_table_name
 
     # the table to be read must be passed either as string or list
-    if isinstance(bound_load_dataframes, partial):
-        if output_type == "table":
-            # dask delayed
-            read_kwargs = {"tables": alternative_table_name}
-        else:
-            # iter or dask bag
-            read_kwargs = {"tables": [alternative_table_name]}
-    elif (bound_load_dataframes.__name__ == "_read_table") or (
-        bound_load_dataframes.__name__ == "_read_as_ddf"
+    if (
+        isinstance(bound_load_dataframes, partial)
+        and output_type == "table"
+        or not isinstance(bound_load_dataframes, partial)
+        and bound_load_dataframes.__name__ in ["_read_table", "_read_as_ddf"]
     ):
-        # eager table or dask dataframe
+        # dask delayed
         read_kwargs = {"tables": alternative_table_name}
     else:
-        # eager dataframe
+        # iter or dask bag
         read_kwargs = {"tables": [alternative_table_name]}
-
     _perform_read_test(
         dataset_uuid=dataset_uuid,
         store_factory=store_factory,

@@ -45,28 +45,19 @@ class BlockBuffer(io.BufferedIOBase):
         """
         If supported by ``raw``, return its closed state, otherwise return ``False``.
         """
-        if hasattr(self._raw, "closed"):
-            return self._raw.closed
-        else:
-            return False
+        return self._raw.closed if hasattr(self._raw, "closed") else False
 
     def _raw_readable(self):
         """
         If supported by ``raw``, return its readable state, otherwise return ``True``.
         """
-        if hasattr(self._raw, "readable"):
-            return self._raw.readable()
-        else:
-            return True
+        return self._raw.readable() if hasattr(self._raw, "readable") else True
 
     def _raw_seekable(self):
         """
         If supported by ``raw``, return its seekable state, otherwise return ``True``.
         """
-        if hasattr(self._raw, "seekable"):
-            return self._raw.seekable()
-        else:
-            return True
+        return self._raw.seekable() if hasattr(self._raw, "seekable") else True
 
     def _setup_cache(self):
         """
@@ -153,16 +144,7 @@ class BlockBuffer(io.BufferedIOBase):
         to_fetch_start = None
         to_fetch_n = None
         while done < size:
-            if self._cached_blocks[block] is not None:
-                # current block is loaded
-                if to_fetch_start is not None:
-                    # there was a block range to be loaded, do that now
-                    self._fetch_blocks(to_fetch_start, to_fetch_n)
-
-                    # no active block range anymore
-                    to_fetch_start = None
-                    to_fetch_n = None
-            else:
+            if self._cached_blocks[block] is None:
                 # current block is missing, do we already have a block range to append to?
                 if to_fetch_start is None:
                     # no block range open, create a new one
@@ -172,6 +154,13 @@ class BlockBuffer(io.BufferedIOBase):
                     # current block range exists, append block
                     to_fetch_n += 1
 
+            elif to_fetch_start is not None:
+                # there was a block range to be loaded, do that now
+                self._fetch_blocks(to_fetch_start, to_fetch_n)
+
+                # no active block range anymore
+                to_fetch_start = None
+                to_fetch_n = None
             done += self._blocksize
             block += 1
 

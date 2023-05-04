@@ -68,10 +68,7 @@ class IndexBase(CopyMixin):
     ):
         if column == _PARTITION_COLUMN_NAME:
             raise ValueError(
-                "Cannot create an index for column {} due to an internal implementation conflict. "
-                "Please contact a kartothek maintainer if you receive this error message".format(
-                    column
-                )
+                f"Cannot create an index for column {column} due to an internal implementation conflict. Please contact a kartothek maintainer if you receive this error message"
             )
         if (dtype is None) and index_dct:
             # do dtype given but index_dct is present => auto-derive dtype
@@ -113,10 +110,7 @@ class IndexBase(CopyMixin):
 
                 if n_collisions:
                     _logger.warning(
-                        (
-                            "Value normalization for index column {} resulted in {} collision(s). Kartothek merged "
-                            "the affected partition lists, but you may want to check if this was desired."
-                        ).format(column, n_collisions)
+                        f"Value normalization for index column {column} resulted in {n_collisions} collision(s). Kartothek merged the affected partition lists, but you may want to check if this was desired."
                     )
             else:
                 # data comes from a trusted source (e.g. an index that we've already preserved and are now reading), so
@@ -178,15 +172,9 @@ class IndexBase(CopyMixin):
                 "Cannot normalize index values as long as dtype is not set"
             )
         elif pa.types.is_string(dtype):
-            if isinstance(value, bytes):
-                return value.decode("utf-8")
-            else:
-                return str(value)
+            return value.decode("utf-8") if isinstance(value, bytes) else str(value)
         elif pa.types.is_binary(dtype):
-            if isinstance(value, bytes):
-                return value
-            else:
-                return str(value).encode("utf-8")
+            return value if isinstance(value, bytes) else str(value).encode("utf-8")
         elif pa.types.is_date(dtype):
             return pd.Timestamp(value).date()
         elif pa.types.is_temporal(dtype):
@@ -202,12 +190,10 @@ class IndexBase(CopyMixin):
                 elif value.lower() == "true":
                     return True
                 else:
-                    return ValueError('Cannot parse boolean value "{}"'.format(value))
+                    return ValueError(f'Cannot parse boolean value "{value}"')
             return bool(value)
         else:
-            raise NotImplementedError(
-                "Cannot normalize index value for type {}".format(dtype)
-            )
+            raise NotImplementedError(f"Cannot normalize index value for type {dtype}")
 
     @property
     def loaded(self) -> bool:
@@ -302,34 +288,27 @@ class IndexBase(CopyMixin):
         """
         if not isinstance(index, IndexBase):
             raise TypeError(
-                "Need to input an kartothek.core.index.IndexBase object, instead got `{}`".format(
-                    type(index)
-                )
+                f"Need to input an kartothek.core.index.IndexBase object, instead got `{type(index)}`"
             )
         # Assume that if one of the indices dtypes is None, they are compatible. In future versions we should make
         # dtype a non-optional parameter
-        if self.dtype is not None and index.dtype is not None:
-            if self.dtype != index.dtype:
-                raise TypeError(
-                    "Trying to update an index with different types. Expected `{}` but got `{}`".format(
-                        self.dtype, index.dtype
-                    )
-                )
+        if (
+            self.dtype is not None
+            and index.dtype is not None
+            and self.dtype != index.dtype
+        ):
+            raise TypeError(
+                f"Trying to update an index with different types. Expected `{self.dtype}` but got `{index.dtype}`"
+            )
 
         if self.column != index.column:
             raise ValueError(
-                "Trying to update an index with the wrong column. Got `{}` but expected `{}`".format(
-                    index.column, self.column
-                )
+                f"Trying to update an index with the wrong column. Got `{index.column}` but expected `{self.column}`"
             )
 
         if index.index_dct is None or len(index.index_dct) == 0:
             return self
-        if inplace:
-            new_index_dict = self.index_dct
-        else:
-            new_index_dict = copy(self.index_dct)
-
+        new_index_dict = self.index_dct if inplace else copy(self.index_dct)
         for value, partition_list in index.index_dct.items():
             old = new_index_dict.get(value, [])
             new_index_dict[value] = list(set(old + partition_list))
@@ -357,8 +336,7 @@ class IndexBase(CopyMixin):
         if inplace:
             values_to_remove = set()
             for val, partition_list in self.index_dct.items():
-                new_partition_set = set(partition_list) - partitions_to_delete
-                if new_partition_set:
+                if new_partition_set := set(partition_list) - partitions_to_delete:
                     self.index_dct[val][:] = new_partition_set
                 else:
                     values_to_remove.add(val)
@@ -371,8 +349,7 @@ class IndexBase(CopyMixin):
         else:
             new_index_dict = {}
             for val, partition_list in self.index_dct.items():
-                new_partition_set = set(partition_list) - partitions_to_delete
-                if new_partition_set:
+                if new_partition_set := set(partition_list) - partitions_to_delete:
                     new_index_dict[val] = list(new_partition_set)
             return self.copy(
                 column=self.column, index_dct=new_index_dict, dtype=self.dtype
@@ -391,9 +368,9 @@ class IndexBase(CopyMixin):
         inplace:
             If `True` the operation is performed inplace and will return the same object
         """
-        set_of_values = set(
+        set_of_values = {
             IndexBase.normalize_value(self.dtype, v) for v in list_of_values
-        )
+        }
 
         if not set_of_values:
             return self
@@ -410,11 +387,11 @@ class IndexBase(CopyMixin):
                 normalize_dtype=False,
             )
         else:
-            new_index_dict = {}
-            for val, partition_list in self.index_dct.items():
-                if val not in set_of_values:
-                    new_index_dict[val] = partition_list
-
+            new_index_dict = {
+                val: partition_list
+                for val, partition_list in self.index_dct.items()
+                if val not in set_of_values
+            }
             return self.copy(
                 column=self.column,
                 index_dct=new_index_dict,
@@ -521,22 +498,17 @@ class IndexBase(CopyMixin):
         if compact and not partitions_as_index:
             return df.set_index(self.column)[result_column]
 
-        # In all other circumstances we need a flat series first
-        # value: part_1
-        # value: part_2
-        # value2: part_1
-        if partitions_as_index or not compact:
-            if len(df) == 0:
-                keys = np.array([], dtype=df[_PARTITION_COLUMN_NAME].values.dtype)
-            else:
-                keys = np.concatenate(df[_PARTITION_COLUMN_NAME].values)
+        if len(df) == 0:
+            keys = np.array([], dtype=df[_PARTITION_COLUMN_NAME].values.dtype)
+        else:
+            keys = np.concatenate(df[_PARTITION_COLUMN_NAME].values)
 
-            lengths = df[_PARTITION_COLUMN_NAME].apply(len).values
-            lengths = lengths.astype(int)
-            values_index = np.repeat(np.arange(len(df)), lengths)
-            values = df[self.column].values[values_index]
+        lengths = df[_PARTITION_COLUMN_NAME].apply(len).values
+        lengths = lengths.astype(int)
+        values_index = np.repeat(np.arange(len(df)), lengths)
+        values = df[self.column].values[values_index]
 
-            df = pd.DataFrame({_PARTITION_COLUMN_NAME: keys, self.column: values})
+        df = pd.DataFrame({_PARTITION_COLUMN_NAME: keys, self.column: values})
 
         # if it is not inverted and not compact, we're done
         if partitions_as_index:
@@ -570,9 +542,7 @@ class PartitionIndex(IndexBase):
         normalize_dtype: bool = True,
     ):
         if dtype is None:
-            raise ValueError(
-                'PartitionIndex dtype of column "{}" cannot be None!'.format(column)
-            )
+            raise ValueError(f'PartitionIndex dtype of column "{column}" cannot be None!')
         super(PartitionIndex, self).__init__(
             column=column,
             index_dct=index_dct,
@@ -581,9 +551,11 @@ class PartitionIndex(IndexBase):
         )
 
     def __eq__(self, other):
-        if not isinstance(other, PartitionIndex):
-            return False
-        return super(PartitionIndex, self).__eq__(other)
+        return (
+            super(PartitionIndex, self).__eq__(other)
+            if isinstance(other, PartitionIndex)
+            else False
+        )
 
 
 class ExplicitSecondaryIndex(IndexBase):
@@ -640,9 +612,7 @@ class ExplicitSecondaryIndex(IndexBase):
         try:
             return super(ExplicitSecondaryIndex, self).__eq__(other)
         except TypeError:  # an `index_dct == None`
-            if self.index_dct != other.index_dct:
-                return False
-            return True
+            return self.index_dct == other.index_dct
 
     @staticmethod
     def from_v2(column: str, dct_or_str: Union[str, IndexDictType]) -> "IndexBase":
@@ -807,7 +777,7 @@ def merge_indices(
     if len(list_of_indices) == 1:
         return list_of_indices[0]
     elif len(list_of_indices) > 2:
-        first = merge_indices(list_of_indices[0::2])
+        first = merge_indices(list_of_indices[::2])
         second = merge_indices(list_of_indices[1::2])
         return merge_indices([first, second])
 
@@ -834,10 +804,10 @@ def remove_partitions_from_indices(
     partitions
         A list of partition labels which should be removed form the index objects
     """
-    new_index_dict = {}
-    for column, index in index_dict.items():
-        new_index_dict[column] = index.remove_partitions(partitions)
-    return new_index_dict
+    return {
+        column: index.remove_partitions(partitions)
+        for column, index in index_dict.items()
+    }
 
 
 def filter_indices(index_dict: _MULTI_COLUMN_INDEX_DCT_TYPE, partitions: Iterable[str]):
@@ -866,11 +836,12 @@ def filter_indices(index_dict: _MULTI_COLUMN_INDEX_DCT_TYPE, partitions: Iterabl
                 part_label for part_label in partition_list if part_label in partitions
             ]
 
-    final_index_dict: _MULTI_COLUMN_INDEX_DCT_TYPE = {}
-    for column, column_index in temp_index_dct.items():
-        final_index_dict[column] = index_types[column](
+    final_index_dict: _MULTI_COLUMN_INDEX_DCT_TYPE = {
+        column: index_types[column](
             column=column, index_dct=column_index, dtype=types[column]
         )
+        for column, column_index in temp_index_dct.items()
+    }
     return final_index_dict
 
 
@@ -923,18 +894,17 @@ def _index_dct_to_table(index_dct: IndexDictType, column: str, dtype: pa.DataTyp
     # fix pyarrow input
     if dtype is None:
         keys: Union[np.ndarray, List[Any]] = np.asarray(list(keys_it))
+    elif pa.types.is_unsigned_integer(dtype):
+        # numpy might create object ndarrays here, which pyarrow might (for some reason) convert fo floats
+        keys = list(keys_it)
+    elif (
+        dtype == pa.timestamp("ns")
+        and has_probe
+        and isinstance(probe, pd.Timestamp)
+    ):
+        keys = np.asarray([d.to_datetime64() for d in keys_it])
     else:
-        if pa.types.is_unsigned_integer(dtype):
-            # numpy might create object ndarrays here, which pyarrow might (for some reason) convert fo floats
-            keys = list(keys_it)
-        elif (
-            dtype == pa.timestamp("ns")
-            and has_probe
-            and isinstance(probe, pd.Timestamp)
-        ):
-            keys = np.asarray([d.to_datetime64() for d in keys_it])
-        else:
-            keys = np.asarray(list(keys_it))
+        keys = np.asarray(list(keys_it))
 
     # TODO: Remove work-around
     # This is because of ARROW-1646:
@@ -942,12 +912,9 @@ def _index_dct_to_table(index_dct: IndexDictType, column: str, dtype: pa.DataTyp
     # Additional note: pyarrow.array is supposed to infer type automatically.
     # But the inferred type is not enough to hold np.uint64. Until this is fixed in
     # upstream Arrow, we have to retain the following line
-    if not index_dct:
-        # the np.array dtype will be double which arrow cannot convert to the target type, so use an empty list instead
-        labeled_array = pa.array([], type=dtype)
-    else:
-        labeled_array = pa.array(keys, type=dtype)
-
+    labeled_array = (
+        pa.array(keys, type=dtype) if index_dct else pa.array([], type=dtype)
+    )
     partition_array = pa.array(list(index_dct.values()), type=pa.list_(pa.string()))
 
     return pa.Table.from_arrays(
