@@ -31,8 +31,7 @@ def _load_dataframes(output_type, *args, **kwargs):
     s = pickle.dumps(tasks, pickle.HIGHEST_PROTOCOL)
     tasks = pickle.loads(s)
 
-    result = [task.compute() for task in tasks]
-    return result
+    return [task.compute() for task in tasks]
 
 
 @pytest.fixture()

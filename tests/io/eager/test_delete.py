@@ -14,7 +14,4 @@ def _delete_store(dataset_uuid, store_factory):
 
 @pytest.fixture(params=["factory", "store-factory"])
 def bound_delete_dataset(request):
-    if request.param == "factory":
-        return _delete_store_factory
-    else:
-        return _delete_store
+    return _delete_store_factory if request.param == "factory" else _delete_store

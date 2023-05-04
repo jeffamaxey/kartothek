@@ -26,8 +26,6 @@ def get_keys_to_clean(cube_uuid_prefix, datasets, store):
         set.union, (get_dataset_keys(ds) for ds in datasets.values()), set()
     )
 
-    keys_present = {
-        k for k in store.iter_keys(cube_uuid_prefix + KTK_CUBE_UUID_SEPERATOR)
-    }
+    keys_present = set(store.iter_keys(cube_uuid_prefix + KTK_CUBE_UUID_SEPERATOR))
 
     return keys_present - keys_should

@@ -63,17 +63,12 @@ def check_provided_metadata_dict(metadata, ktk_cube_dataset_ids):
         metadata = {}
     elif not isinstance(metadata, dict):
         raise TypeError(
-            "Provided metadata should be a dict but is {}".format(
-                type(metadata).__name__
-            )
+            f"Provided metadata should be a dict but is {type(metadata).__name__}"
         )
 
-    unknown_ids = set(metadata.keys()) - set(ktk_cube_dataset_ids)
-    if unknown_ids:
+    if unknown_ids := set(metadata.keys()) - set(ktk_cube_dataset_ids):
         raise ValueError(
-            "Provided metadata for otherwise unspecified ktk_cube_dataset_ids: {}".format(
-                ", ".join(sorted(unknown_ids))
-            )
+            f'Provided metadata for otherwise unspecified ktk_cube_dataset_ids: {", ".join(sorted(unknown_ids))}'
         )
 
     # sorted iteration for deterministic error messages
@@ -81,9 +76,7 @@ def check_provided_metadata_dict(metadata, ktk_cube_dataset_ids):
         v = metadata[k]
         if not isinstance(v, dict):
             raise TypeError(
-                "Provided metadata for dataset {} should be a dict but is {}".format(
-                    k, type(v).__name__
-                )
+                f"Provided metadata for dataset {k} should be a dict but is {type(v).__name__}"
             )
 
     return metadata
@@ -184,7 +177,7 @@ def check_user_df(ktk_cube_dataset_id, df, cube, existing_payload, partition_on)
     """
     if df is None:
         return
-    if not (isinstance(df, pd.DataFrame) or isinstance(df, dd.DataFrame)):
+    if not isinstance(df, (pd.DataFrame, dd.DataFrame)):
         raise TypeError(
             'Provided DataFrame is not a pandas.DataFrame or None, but is a "{t}"'.format(
                 t=type(df).__name__
@@ -207,8 +200,10 @@ def check_user_df(ktk_cube_dataset_id, df, cube, existing_payload, partition_on)
         )
 
     if ktk_cube_dataset_id == cube.seed_dataset:
-        missing_dimension_columns = set(cube.dimension_columns) - df_columns_set
-        if missing_dimension_columns:
+        if (
+            missing_dimension_columns := set(cube.dimension_columns)
+            - df_columns_set
+        ):
             raise ValueError(
                 'Missing dimension columns in seed data "{ktk_cube_dataset_id}": {missing_dimension_columns}'.format(
                     ktk_cube_dataset_id=ktk_cube_dataset_id,
@@ -217,17 +212,15 @@ def check_user_df(ktk_cube_dataset_id, df, cube, existing_payload, partition_on)
                     ),
                 )
             )
-    else:
-        if len(dcols_present) == 0:
-            raise ValueError(
-                'Dataset "{ktk_cube_dataset_id}" must have at least 1 of the following dimension columns: {dims}'.format(
-                    ktk_cube_dataset_id=ktk_cube_dataset_id,
-                    dims=", ".join(cube.dimension_columns),
-                )
+    elif len(dcols_present) == 0:
+        raise ValueError(
+            'Dataset "{ktk_cube_dataset_id}" must have at least 1 of the following dimension columns: {dims}'.format(
+                ktk_cube_dataset_id=ktk_cube_dataset_id,
+                dims=", ".join(cube.dimension_columns),
             )
+        )
 
-    missing_partition_columns = set(partition_on) - df_columns_set
-    if missing_partition_columns:
+    if missing_partition_columns := set(partition_on) - df_columns_set:
         raise ValueError(
             'Missing partition columns in dataset "{ktk_cube_dataset_id}": {missing_partition_columns}'.format(
                 ktk_cube_dataset_id=ktk_cube_dataset_id,
@@ -246,8 +239,7 @@ def check_user_df(ktk_cube_dataset_id, df, cube, existing_payload, partition_on)
         )
 
     payload = get_payload_subset(df.columns, cube)
-    payload_overlap = payload & existing_payload
-    if payload_overlap:
+    if payload_overlap := payload & existing_payload:
         raise ValueError(
             'Payload written in "{ktk_cube_dataset_id}" is already present in cube: {payload_overlap}'.format(
                 ktk_cube_dataset_id=ktk_cube_dataset_id,
@@ -255,10 +247,9 @@ def check_user_df(ktk_cube_dataset_id, df, cube, existing_payload, partition_on)
             )
         )
 
-    unspecified_partition_columns = (df_columns_set - set(partition_on)) & set(
-        cube.partition_columns
-    )
-    if unspecified_partition_columns:
+    if unspecified_partition_columns := (
+        df_columns_set - set(partition_on)
+    ) & set(cube.partition_columns):
         raise ValueError(
             f"Unspecified but provided partition columns in {ktk_cube_dataset_id}: "
             f"{', '.join(sorted(unspecified_partition_columns))}"
@@ -433,13 +424,11 @@ def apply_postwrite_checks(datasets, cube, store, existing_datasets):
         If sanity check failed.
     """
     try:
-        empty_datasets = {
+        if empty_datasets := {
             ktk_cube_dataset_id
             for ktk_cube_dataset_id, ds in datasets.items()
             if SINGLE_TABLE not in ds.table_meta or len(ds.partitions) == 0
-        }
-
-        if empty_datasets:
+        }:
             raise ValueError(
                 "Cannot write empty datasets: {empty_datasets}".format(
                     empty_datasets=", ".join(sorted(empty_datasets))
@@ -485,14 +474,13 @@ def check_datasets_prebuild(ktk_cube_dataset_ids, cube, existing_datasets):
         In case of an error.
     """
     if cube.seed_dataset not in ktk_cube_dataset_ids:
-        raise ValueError('Seed data ("{}") is missing.'.format(cube.seed_dataset))
+        raise ValueError(f'Seed data ("{cube.seed_dataset}") is missing.')
 
-    missing_overwrites = set(existing_datasets.keys()) - set(ktk_cube_dataset_ids)
-    if missing_overwrites:
+    if missing_overwrites := set(existing_datasets.keys()) - set(
+        ktk_cube_dataset_ids
+    ):
         raise ValueError(
-            "Following datasets exists but are not overwritten (partial overwrite), this is not allowed: {}".format(
-                ", ".join(sorted(missing_overwrites))
-            )
+            f'Following datasets exists but are not overwritten (partial overwrite), this is not allowed: {", ".join(sorted(missing_overwrites))}'
         )
 
 
@@ -522,9 +510,7 @@ def check_datasets_preextend(ktk_cube_dataset_ids, cube):
     """
     if cube.seed_dataset in ktk_cube_dataset_ids:
         raise ValueError(
-            'Seed data ("{}") cannot be written during extension.'.format(
-                cube.seed_dataset
-            )
+            f'Seed data ("{cube.seed_dataset}") cannot be written during extension.'
         )
 
 
@@ -594,12 +580,11 @@ def prepare_ktk_partition_on(
     for ktk_cube_dataset_id in ktk_cube_dataset_ids:
         po = tuple(partition_on.get(ktk_cube_dataset_id, default))
 
-        if ktk_cube_dataset_id == cube.seed_dataset:
-            if po != default:
-                raise ValueError(
-                    f"Seed dataset {ktk_cube_dataset_id} must have the following, fixed partition-on attribute: "
-                    f"{', '.join(default)}"
-                )
+        if ktk_cube_dataset_id == cube.seed_dataset and po != default:
+            raise ValueError(
+                f"Seed dataset {ktk_cube_dataset_id} must have the following, fixed partition-on attribute: "
+                f"{', '.join(default)}"
+            )
         if len(set(po)) != len(po):
             raise ValueError(
                 f"partition-on attribute of dataset {ktk_cube_dataset_id} contains duplicates: {', '.join(po)}"

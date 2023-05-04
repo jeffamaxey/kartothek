@@ -125,9 +125,7 @@ class DataFrameSerializer:
                 return df
 
         # No serialiser matched
-        raise ValueError(
-            "The specified file format for '{}' is not supported".format(key)
-        )
+        raise ValueError(f"The specified file format for '{key}' is not supported")
 
     def store(self, store: KeyValueStore, key_prefix: str, df: pd.DataFrame) -> str:
         """
@@ -239,16 +237,11 @@ def filter_predicates_by_column(
     check_predicates(predicates)
     filtered_predicates = []
     for predicate in predicates:
-        new_conjunction = []
-        for col, op, val in predicate:
-            if col in columns:
-                new_conjunction.append((col, op, val))
-        if new_conjunction:
+        if new_conjunction := [
+            (col, op, val) for col, op, val in predicate if col in columns
+        ]:
             filtered_predicates.append(new_conjunction)
-    if filtered_predicates:
-        return filtered_predicates
-    else:
-        return None
+    return filtered_predicates if filtered_predicates else None
 
 
 def columns_in_predicates(predicates: PredicatesType) -> Set[str]:
@@ -335,9 +328,12 @@ def _handle_categorical_data(array_like, require_ordered):
 def _handle_null_arrays(array_like, value_dtype):
     # NULL types might not be preserved well, so try to cast floats (pandas default type) to the value type
     # Determine the type using the `kind` interface since this is common for a numpy array, pandas series and pandas extension arrays
-    if array_like.dtype.kind == "f" and np.isnan(array_like).all():
-        if array_like.dtype.kind != value_dtype.kind:
-            array_like = array_like.astype(value_dtype)
+    if (
+        array_like.dtype.kind == "f"
+        and np.isnan(array_like).all()
+        and array_like.dtype.kind != value_dtype.kind
+    ):
+        array_like = array_like.astype(value_dtype)
     return array_like, array_like.dtype
 
 

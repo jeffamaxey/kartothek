@@ -184,10 +184,9 @@ def _get_dask_meta_for_dataset(
         meta = meta.astype({col: "category" for col in categoricals})
         meta = dd.utils.clear_known_categories(meta, categoricals)
 
-    categoricals_from_index = _maybe_get_categoricals_from_index(
+    if categoricals_from_index := _maybe_get_categoricals_from_index(
         ds_factory, {table: categoricals}
-    )
-    if categoricals_from_index:
+    ):
         meta = meta.astype(categoricals_from_index[table])
     return meta
 
@@ -366,15 +365,19 @@ def _write_dataframe_partitions(
         )
 
     if ddf is None:
-        mps = dd.from_pandas(
+        return dd.from_pandas(
             pd.Series(
-                [parse_input_to_metapartition(None, metadata_version=metadata_version)]
+                [
+                    parse_input_to_metapartition(
+                        None, metadata_version=metadata_version
+                    )
+                ]
             ),
             npartitions=1,
         )
     else:
-        if shuffle:
-            mps = shuffle_store_dask_partitions(
+        return (
+            shuffle_store_dask_partitions(
                 ddf=ddf,
                 table=table,
                 secondary_indices=secondary_indices,
@@ -387,8 +390,8 @@ def _write_dataframe_partitions(
                 sort_partitions_by=sort_partitions_by,
                 bucket_by=bucket_by,
             )
-        else:
-            mps = ddf.map_partitions(
+            if shuffle
+            else ddf.map_partitions(
                 write_partition,
                 secondary_indices=secondary_indices,
                 metadata_version=metadata_version,
@@ -400,7 +403,7 @@ def _write_dataframe_partitions(
                 dataset_table_name=table,
                 meta=(MetaPartition),
             )
-    return mps
+        )
 
 
 @default_docs
@@ -549,18 +552,21 @@ def collect_dataset_metadata(
         load_dataset_metadata=False,
     )
 
-    mps = list(
-        dispatch_metapartitions_from_factory(dataset_factory, predicates=predicates)
-    )
-    if mps:
+    if mps := list(
+        dispatch_metapartitions_from_factory(
+            dataset_factory, predicates=predicates
+        )
+    ):
         random.shuffle(mps)
         # ensure that even with sampling at least one metapartition is returned
         cutoff_index = max(1, int(len(mps) * frac))
         mps = mps[:cutoff_index]
-        ddf = dd.from_delayed(
+        return dd.from_delayed(
             [
                 dask.delayed(MetaPartition.get_parquet_metadata)(
-                    mp, store=dataset_factory.store_factory, table_name=table_name
+                    mp,
+                    store=dataset_factory.store_factory,
+                    table_name=table_name,
                 )
                 for mp in mps
             ],
@@ -569,9 +575,7 @@ def collect_dataset_metadata(
     else:
         df = pd.DataFrame(columns=_METADATA_SCHEMA.keys())
         df = df.astype(_METADATA_SCHEMA)
-        ddf = dd.from_pandas(df, npartitions=1)
-
-    return ddf
+        return dd.from_pandas(df, npartitions=1)
 
 
 def _unpack_hash(df, unpack_meta, subset):
@@ -640,10 +644,9 @@ def hash_dataset(
     )
     if not group_key:
         return ddf.map_partitions(_hash_partition, meta="uint64").astype("uint64")
-    else:
-        ddf2 = pack_payload(ddf, group_key=group_key)
-        return (
-            ddf2.groupby(group_key)
-            .apply(_unpack_hash, unpack_meta=ddf._meta, subset=subset, meta="uint64")
-            .astype("uint64")
-        )
+    ddf2 = pack_payload(ddf, group_key=group_key)
+    return (
+        ddf2.groupby(group_key)
+        .apply(_unpack_hash, unpack_meta=ddf._meta, subset=subset, meta="uint64")
+        .astype("uint64")
+    )

@@ -47,13 +47,10 @@ def _validate_uuid(uuid: str) -> bool:
 
 
 def to_ordinary_dict(dct: Dict) -> Dict:
-    new_dct = {}
-    for key, value in dct.items():
-        if isinstance(value, dict):
-            new_dct[key] = to_ordinary_dict(value)
-        else:
-            new_dct[key] = value
-    return new_dct
+    return {
+        key: to_ordinary_dict(value) if isinstance(value, dict) else value
+        for key, value in dct.items()
+    }
 
 
 T = TypeVar("T", bound="DatasetMetadataBase")
@@ -110,9 +107,7 @@ class DatasetMetadataBase(CopyMixin):
             return False
         if self.partition_keys != other.partition_keys:
             return False
-        if self.table_meta != other.table_meta:
-            return False
-        return True
+        return self.table_meta == other.table_meta
 
     @property
     def table_meta(self) -> Dict[str, SchemaWrapper]:
@@ -132,19 +127,18 @@ class DatasetMetadataBase(CopyMixin):
 
     @property
     def primary_indices_loaded(self) -> bool:
-        if not self.partition_keys:
-            return False
-        for pkey in self.partition_keys:
-            if pkey not in self.indices:
-                return False
-        return True
+        return (
+            all(pkey in self.indices for pkey in self.partition_keys)
+            if self.partition_keys
+            else False
+        )
 
     @property
     def tables(self) -> List[str]:
         if self.table_meta:
             return list(self.table_meta.keys())
         elif self.partitions:
-            return [tab for tab in list(self.partitions.values())[0].files]
+            return list(list(self.partitions.values())[0].files)
         else:
             return []
 
@@ -196,7 +190,7 @@ class DatasetMetadataBase(CopyMixin):
 
         """
         store = ensure_store(store)
-        start_markers = ["{}.".format(uuid), "{}/".format(uuid)]
+        start_markers = [f"{uuid}.", f"{uuid}/"]
         return list(
             sorted(
                 k
@@ -263,19 +257,18 @@ class DatasetMetadataBase(CopyMixin):
             return self.load_partition_indices()
 
         if column not in self.indices:
-            raise KeyError("No index specified for column '{}'".format(column))
+            raise KeyError(f"No index specified for column '{column}'")
 
         index = self.indices[column]
         if index.loaded or not isinstance(index, ExplicitSecondaryIndex):
             return self
 
         loaded_index = index.load(store=store)
-        if not self.explicit_partitions:
-            col_loaded_index = filter_indices(
-                {column: loaded_index}, self.partitions.keys()
-            )
-        else:
-            col_loaded_index = {column: loaded_index}
+        col_loaded_index = (
+            {column: loaded_index}
+            if self.explicit_partitions
+            else filter_indices({column: loaded_index}, self.partitions.keys())
+        )
         indices = dict(self.indices, **col_loaded_index)
         return self.copy(indices=indices)
 
@@ -484,14 +477,13 @@ class DatasetMetadataBase(CopyMixin):
         pd.DataFrame: df_result
             A DataFrame containing all indices for which `predicates` holds true.
         """
-        non_index_columns = set(columns) - self.indices.keys()
-        if non_index_columns:
+        if non_index_columns := set(columns) - self.indices.keys():
             if non_index_columns & set(self.partition_keys):
                 raise RuntimeError(
                     "Partition indices not loaded. Please call `DatasetMetadata.load_partition_indices` first."
                 )
             raise ValueError(
-                "Unknown index columns: {}".format(", ".join(sorted(non_index_columns)))
+                f'Unknown index columns: {", ".join(sorted(non_index_columns))}'
             )
         dfs = []
         for col in columns:
@@ -600,9 +592,7 @@ class DatasetMetadata(DatasetMetadataBase):
                 value = store.get(key2)
                 metadata = unpackb(value)
             except KeyError:
-                raise KeyError(
-                    "Dataset does not exist. Tried {} and {}".format(key1, key2)
-                )
+                raise KeyError(f"Dataset does not exist. Tried {key1} and {key2}")
 
         ds = DatasetMetadata.load_from_dict(metadata, store, load_schema=load_schema)
         if load_all_indices:
@@ -645,14 +635,15 @@ class DatasetMetadata(DatasetMetadataBase):
             metadata["partitions"] = partitions
 
         if metadata["partitions"]:
-            tables = [tab for tab in list(metadata["partitions"].values())[0]["files"]]
+            tables = list(list(metadata["partitions"].values())[0]["files"])
         else:
-            table_set = set()
             if storage_keys is None:
                 storage_keys = DatasetMetadata.storage_keys(dataset_uuid, store)
-            for key in storage_keys:
-                if key.endswith(naming.TABLE_METADATA_FILE):
-                    table_set.add(key.split("/")[1])
+            table_set = {
+                key.split("/")[1]
+                for key in storage_keys
+                if key.endswith(naming.TABLE_METADATA_FILE)
+            }
             tables = list(table_set)
 
         table_meta = {}
@@ -675,10 +666,7 @@ class DatasetMetadata(DatasetMetadataBase):
 
     @staticmethod
     def from_buffer(buf: str, format: str = "json", explicit_partitions: bool = True):
-        if format == "json":
-            metadata = load_json(buf)
-        else:
-            metadata = unpackb(buf)
+        metadata = load_json(buf) if format == "json" else unpackb(buf)
         return DatasetMetadata.from_dict(
             metadata, explicit_partitions=explicit_partitions
         )
@@ -741,7 +729,7 @@ def _get_type_from_meta(
         return default
 
     raise ValueError(
-        'Cannot find type information for partition column "{}"'.format(column)
+        f'Cannot find type information for partition column "{column}"'
     )
 
 
@@ -773,14 +761,11 @@ def _construct_dynamic_index_from_partitions(
     default_dtype: pa.DataType,
     partition_keys: List[str],
 ) -> Dict[str, PartitionIndex]:
-    if len(partitions) == 0:
+    if not partitions:
         return _empty_partition_indices(partition_keys, table_meta, default_dtype)
 
     def _get_files(part):
-        if isinstance(part, dict):
-            return part["files"]
-        else:
-            return part.files
+        return part["files"] if isinstance(part, dict) else part.files
 
     # We exploit the fact that all tables are partitioned equally.
     first_partition = next(
@@ -837,8 +822,7 @@ def _check_index_depth(indices, depth_indices):
 def _get_partition_keys_from_partitions(partitions):
     if len(partitions):
         part = next(iter(partitions.values()))
-        files_dct = part["files"]
-        if files_dct:
+        if files_dct := part["files"]:
             key = next(iter(files_dct.values()))
             _, _, indices, _ = decode_key(key)
             if indices:
@@ -894,8 +878,7 @@ def create_partition_key(
     index_path = quote_indices(index_values)
     key_components.extend(index_path)
     key_components.append(filename)
-    key = "/".join(key_components)
-    return key
+    return "/".join(key_components)
 
 
 class DatasetMetadataBuilder(CopyMixin):

@@ -130,11 +130,7 @@ def persist_common_metadata(partition_list, update_dataset, store, dataset_uuid)
     if update_dataset:
         if set(tm_dct.keys()) and set(update_dataset.tables) != set(tm_dct.keys()):
             raise ValueError(
-                (
-                    "Input partitions for update have different tables than dataset:\n"
-                    "Input partition tables: {}\n"
-                    "Tables of existing dataset: {}"
-                ).format(set(tm_dct.keys()), update_dataset.tables)
+                f"Input partitions for update have different tables than dataset:\nInput partition tables: {set(tm_dct.keys())}\nTables of existing dataset: {update_dataset.tables}"
             )
         for table in update_dataset.tables:
             tm_dct[table].add(
@@ -205,13 +201,9 @@ def store_dataset_from_partitions(
     # fail hard. The resulting dataset may be corrupted or file may be left in the store
     # without dataset metadata
     partition_labels = partition_labels_from_mps(partition_list)
-    non_unique_labels = extract_duplicates(partition_labels)
-
-    if non_unique_labels:
+    if non_unique_labels := extract_duplicates(partition_labels):
         raise ValueError(
-            "The labels {} are duplicated. Dataset metadata was not written.".format(
-                ", ".join(non_unique_labels)
-            )
+            f'The labels {", ".join(non_unique_labels)} are duplicated. Dataset metadata was not written.'
         )
 
     if remove_partitions is None:
@@ -235,12 +227,9 @@ def store_dataset_from_partitions(
         store.put(*dataset_builder.to_msgpack())
     else:
         raise ValueError(
-            "Unknown metadata storage format encountered: {}".format(
-                metadata_storage_format
-            )
+            f"Unknown metadata storage format encountered: {metadata_storage_format}"
         )
-    dataset = dataset_builder.to_dataset()
-    return dataset
+    return dataset_builder.to_dataset()
 
 
 @deprecate_parameters_if_set(

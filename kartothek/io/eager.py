@@ -305,18 +305,14 @@ def _check_compatible_list(table, obj, argument_name=""):
     elif isinstance(obj, dict):
         if table not in obj:
             raise ValueError(
-                "Provided table {} is not compatible with input from argument {}.".format(
-                    table, argument_name
-                )
+                f"Provided table {table} is not compatible with input from argument {argument_name}."
             )
         return obj
     elif isinstance(obj, list):
         return {table: obj}
     else:
         raise TypeError(
-            "Unknown type encountered for argument {}. Expected `list`, got `{}` instead".format(
-                argument_name, type(obj)
-            )
+            f"Unknown type encountered for argument {argument_name}. Expected `list`, got `{type(obj)}` instead"
         )
 
 
@@ -537,7 +533,7 @@ def commit_dataset(
 
     mps_list = [_maybe_infer_files_attribute(mp, dataset_uuid) for mp in mps]
 
-    dmd = update_dataset_from_partitions(
+    return update_dataset_from_partitions(
         mps_list,
         store_factory=store,
         dataset_uuid=dataset_uuid,
@@ -546,7 +542,6 @@ def commit_dataset(
         metadata=metadata,
         metadata_merger=metadata_merger,
     )
-    return dmd
 
 
 def _maybe_infer_files_attribute(metapartition, dataset_uuid):
@@ -558,9 +553,8 @@ def _maybe_infer_files_attribute(metapartition, dataset_uuid):
                     "Trying to commit partitions without `data` or `files` information."
                     "Either one is necessary to infer the dataset tables"
                 )
-            new_files = {}
-            for table in mp.data:
-                new_files[table] = (
+            new_files = {
+                table: (
                     get_partition_file_prefix(
                         dataset_uuid=dataset_uuid,
                         partition_label=mp.label,
@@ -569,6 +563,8 @@ def _maybe_infer_files_attribute(metapartition, dataset_uuid):
                     )
                     + PARQUET_FILE_SUFFIX  # noqa: W503 line break before binary operator
                 )
+                for table in mp.data
+            }
             mp = mp.copy(files=new_files)
 
         new_mp = new_mp.add_metapartition(mp)
@@ -693,9 +689,7 @@ def create_empty_dataset_header(
         store.put(*dataset_builder.to_msgpack())
     else:
         raise ValueError(
-            "Unknown metadata storage format encountered: {}".format(
-                metadata_storage_format
-            )
+            f"Unknown metadata storage format encountered: {metadata_storage_format}"
         )
     return dataset_builder.to_dataset()
 

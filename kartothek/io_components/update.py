@@ -44,7 +44,7 @@ def update_dataset_from_partitions(
         # Dataset does not exist yet.
         remove_partitions = []
 
-    new_dataset = store_dataset_from_partitions(
+    return store_dataset_from_partitions(
         partition_list=partition_list,
         store=store,
         dataset_uuid=dataset_uuid,
@@ -53,5 +53,3 @@ def update_dataset_from_partitions(
         update_dataset=ds_factory,
         remove_partitions=remove_partitions,
     )
-
-    return new_dataset

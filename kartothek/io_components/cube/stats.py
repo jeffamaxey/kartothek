@@ -58,10 +58,13 @@ def get_metapartitions_for_stats(datasets):
     all_metapartitions = []
     for ktk_cube_dataset_id, ds in datasets.items():
         dataset_factory = metadata_factory_from_dataset(ds)
-        for mp in dispatch_metapartitions_from_factory(
-            dataset_factory=dataset_factory, dispatch_by=dataset_factory.partition_keys
-        ):
-            all_metapartitions.append((ktk_cube_dataset_id, mp))
+        all_metapartitions.extend(
+            (ktk_cube_dataset_id, mp)
+            for mp in dispatch_metapartitions_from_factory(
+                dataset_factory=dataset_factory,
+                dispatch_by=dataset_factory.partition_keys,
+            )
+        )
     return all_metapartitions
 
 

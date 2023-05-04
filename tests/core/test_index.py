@@ -78,14 +78,14 @@ def test_eq_explicit():
     def assert_eq(a, b):
         assert a == b
         assert b == a
-        assert not (a != b)
-        assert not (b != a)
+        assert a == b
+        assert b == a
 
     def assert_ne(a, b):
         assert a != b
         assert b != a
-        assert not (a == b)
-        assert not (b == a)
+        assert a != b
+        assert b != a
 
     original_index = ExplicitSecondaryIndex(
         column="col",
@@ -334,13 +334,13 @@ def test_index_as_flat_series_highly_degenerated_sym():
     index1 = ExplicitSecondaryIndex(
         column="col",
         index_dct={
-            k: ["part_{}".format(i) for i in range(0, dim)] for k in range(0, dim)
+            k: [f"part_{i}" for i in range(0, dim)] for k in range(0, dim)
         },
         dtype=pa.int64(),
     )
     ser = index1.as_flat_series()
     expected = pd.Series(
-        ["part_{}".format(i) for i in range(0, dim)] * dim,
+        [f"part_{i}" for i in range(0, dim)] * dim,
         index=pd.Index(
             np.array([[i] * dim for i in range(0, dim)]).ravel(), name="col"
         ),
@@ -354,7 +354,7 @@ def test_index_as_flat_series_highly_degenerated_asym():
     Ensure that the generation of the series is not bound by col numbers or nans in the matrix
     """
     dim = 4
-    ind_dct = {k: ["part_{}".format(i) for i in range(0, dim)] for k in range(0, dim)}
+    ind_dct = {k: [f"part_{i}" for i in range(0, dim)] for k in range(0, dim)}
     ind_dct[0] = ["part_1"]
     ind_dct[2] = ["part_2", "part_5"]
     index1 = ExplicitSecondaryIndex(column="col", index_dct=ind_dct, dtype=pa.int64())
@@ -504,10 +504,7 @@ def test_observed_values_date_as_object(date_as_object):
         column="col", dtype=pa.date32(), index_dct={value: ["part_label"]}
     )
     observed = ind.observed_values(date_as_object=date_as_object)
-    if date_as_object:
-        expected = value
-    else:
-        expected = pd.Timestamp(value).to_datetime64()
+    expected = value if date_as_object else pd.Timestamp(value).to_datetime64()
     assert len(observed) == 1
     assert observed[0] == expected
 
@@ -700,10 +697,7 @@ def test_index_ts_inference(store):
 
 
 def _dict_to_index(dct):
-    new_dct = {}
-    for col in dct:
-        new_dct[col] = ExplicitSecondaryIndex(col, dct[col])
-    return new_dct
+    return {col: ExplicitSecondaryIndex(col, dct[col]) for col in dct}
 
 
 @pytest.mark.parametrize("obj_factory", [dict, _dict_to_index])

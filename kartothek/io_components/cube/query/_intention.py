@@ -35,18 +35,16 @@ def _process_dimension_columns(dimension_columns, cube):
     """
     if dimension_columns is None:
         return cube.dimension_columns
-    else:
-        dimension_columns = converter_str_tupleset(dimension_columns)
-        missing = set(dimension_columns) - set(cube.dimension_columns)
-        if missing:
-            raise ValueError(
-                "Following dimension columns were requested but are missing from the cube: {missing}".format(
-                    missing=", ".join(sorted(missing))
-                )
+    dimension_columns = converter_str_tupleset(dimension_columns)
+    if missing := set(dimension_columns) - set(cube.dimension_columns):
+        raise ValueError(
+            "Following dimension columns were requested but are missing from the cube: {missing}".format(
+                missing=", ".join(sorted(missing))
             )
-        if len(dimension_columns) == 0:
-            raise ValueError("Dimension columns cannot be empty.")
-        return dimension_columns
+        )
+    if len(dimension_columns) == 0:
+        raise ValueError("Dimension columns cannot be empty.")
+    return dimension_columns
 
 
 def _process_partition_by(partition_by, cube, all_available_columns, indexed_columns):
@@ -71,29 +69,26 @@ def _process_partition_by(partition_by, cube, all_available_columns, indexed_col
     """
     if partition_by is None:
         return []
-    else:
-        partition_by = converter_str_tupleset(partition_by)
-        partition_by_set = set(partition_by)
+    partition_by = converter_str_tupleset(partition_by)
+    partition_by_set = set(partition_by)
 
-        missing_available = partition_by_set - all_available_columns
-        if missing_available:
-            raise ValueError(
-                "Following partition-by columns were requested but are missing from the cube: {missing}".format(
-                    missing=", ".join(sorted(missing_available))
-                )
+    if missing_available := partition_by_set - all_available_columns:
+        raise ValueError(
+            "Following partition-by columns were requested but are missing from the cube: {missing}".format(
+                missing=", ".join(sorted(missing_available))
             )
-
-        missing_indexed = partition_by_set - reduce(
-            set.union, indexed_columns.values(), set()
         )
-        if missing_indexed:
-            raise ValueError(
-                "Following partition-by columns are not indexed and cannot be used: {missing}".format(
-                    missing=", ".join(sorted(missing_indexed))
-                )
-            )
 
-        return partition_by
+    if missing_indexed := partition_by_set - reduce(
+        set.union, indexed_columns.values(), set()
+    ):
+        raise ValueError(
+            "Following partition-by columns are not indexed and cannot be used: {missing}".format(
+                missing=", ".join(sorted(missing_indexed))
+            )
+        )
+
+    return partition_by
 
 
 def _test_condition_types(conditions, datasets):
@@ -194,8 +189,7 @@ def _process_conditions(
     conditions = Conjunction(conditions)
 
     condition_columns = conditions.columns
-    missing = condition_columns - all_available_columns
-    if missing:
+    if missing := condition_columns - all_available_columns:
         raise ValueError(
             "Following condition columns are required but are missing from the cube: {missing}".format(
                 missing=", ".join(sorted(missing))
@@ -211,13 +205,12 @@ def _process_conditions(
         if not candidate_cols:
             continue
 
-        filtered = [
-            conj for col, conj in conditions_split.items() if col in candidate_cols
-        ]
-        if not filtered:
-            continue
-
-        conditions_pre[ktk_cube_dataset_id] = reduce(Conjunction.from_two, filtered)
+        if filtered := [
+            conj
+            for col, conj in conditions_split.items()
+            if col in candidate_cols
+        ]:
+            conditions_pre[ktk_cube_dataset_id] = reduce(Conjunction.from_two, filtered)
 
     conditions_post = {}
     for ktk_cube_dataset_id, ds in datasets.items():
@@ -227,13 +220,12 @@ def _process_conditions(
         if not candidate_cols:
             continue
 
-        filtered = [
-            conj for col, conj in conditions_split.items() if col in candidate_cols
-        ]
-        if not filtered:
-            continue
-
-        conditions_post[ktk_cube_dataset_id] = reduce(Conjunction.from_two, filtered)
+        if filtered := [
+            conj
+            for col, conj in conditions_split.items()
+            if col in candidate_cols
+        ]:
+            conditions_post[ktk_cube_dataset_id] = reduce(Conjunction.from_two, filtered)
 
     return conditions_pre, conditions_post
 
@@ -258,16 +250,14 @@ def _process_payload(payload_columns, all_available_columns, cube):
     """
     if payload_columns is None:
         return all_available_columns
-    else:
-        payload_columns = converter_str_set(payload_columns)
-        missing = payload_columns - all_available_columns
-        if missing:
-            raise ValueError(
-                "Cannot find the following requested payload columns: {missing}".format(
-                    missing=", ".join(sorted(missing))
-                )
+    payload_columns = converter_str_set(payload_columns)
+    if missing := payload_columns - all_available_columns:
+        raise ValueError(
+            "Cannot find the following requested payload columns: {missing}".format(
+                missing=", ".join(sorted(missing))
             )
-        return payload_columns
+        )
+    return payload_columns
 
 
 def determine_intention(

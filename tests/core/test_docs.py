@@ -93,7 +93,7 @@ def test_docs(function):
             f"Wrong or missing docstrings for parameters {valid_docs[False]}.\n\n{docstrings}"
         )
 
-    assert all([argument in docstrings for argument in arguments])
+    assert all(argument in docstrings for argument in arguments)
 
 
 def test_docs_duplicity():

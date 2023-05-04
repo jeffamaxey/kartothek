@@ -41,7 +41,7 @@ def reference_store():
         "reference-data",
         "arrow-compat",
     )
-    return get_store_from_url("hfs://{}".format(path))
+    return get_store_from_url(f"hfs://{path}")
 
 
 def test_current_arrow_version_tested():

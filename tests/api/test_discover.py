@@ -78,13 +78,9 @@ def store_data(
             KTK_CUBE_METADATA_KEY_IS_SEED: (name == cube.seed_dataset),
         }
         if new_ktk_cube_metadata:
-            metadata.update(
-                {KTK_CUBE_METADATA_PARTITION_COLUMNS: cube.partition_columns}
-            )
+            metadata[KTK_CUBE_METADATA_PARTITION_COLUMNS] = cube.partition_columns
         if write_suppress_index_on:
-            metadata.update(
-                {KTK_CUBE_METADATA_SUPPRESS_INDEX_ON: list(cube.suppress_index_on)}
-            )
+            metadata[KTK_CUBE_METADATA_SUPPRESS_INDEX_ON] = list(cube.suppress_index_on)
 
     return store_dataframes_as_dataset(
         store=function_store,

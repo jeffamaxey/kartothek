@@ -30,8 +30,8 @@ def test_raise_on_erroneous_input():
 
 
 def test_eq():
-    assert not (Partition("label") == Partition("other_label"))
-    assert not (Partition("label") == Partition("label", files={"some": "file"}))
+    assert Partition("label") != Partition("other_label")
+    assert Partition("label") != Partition("label", files={"some": "file"})
 
     assert Partition(label="label", files={"some": "file"}) == Partition(
         label="label", files={"some": "file"}

@@ -46,17 +46,15 @@ def prepare_metapartitions_for_removal_action(
         )
 
     ktk_cube_dataset_ids = converter_str_set_optional(ktk_cube_dataset_ids)
-    if ktk_cube_dataset_ids is not None:
-        unknown_dataset_ids = ktk_cube_dataset_ids - set(existing_datasets.keys())
-        if unknown_dataset_ids:
-            raise ValueError(
-                "Unknown ktk_cube_dataset_ids: {}".format(
-                    ", ".join(sorted(unknown_dataset_ids))
-                )
-            )
-    else:
+    if ktk_cube_dataset_ids is None:
         ktk_cube_dataset_ids = set(existing_datasets.keys())
 
+    elif unknown_dataset_ids := ktk_cube_dataset_ids - set(
+        existing_datasets.keys()
+    ):
+        raise ValueError(
+            f'Unknown ktk_cube_dataset_ids: {", ".join(sorted(unknown_dataset_ids))}'
+        )
     metapartitions = {}
     for ktk_cube_dataset_id in ktk_cube_dataset_ids:
         ds = existing_datasets[ktk_cube_dataset_id]

@@ -44,7 +44,7 @@ class IndexBase(AsvBenchmarkConfig):
             column=self.column_name, index_dct=index_dct, dtype=arrow_type
         )
         self.tmp_dir = tempfile.mkdtemp()
-        self.store = storefact.get_store_from_url("hfs://{}".format(self.tmp_dir))
+        self.store = storefact.get_store_from_url(f"hfs://{self.tmp_dir}")
         self.dataset_uuid = "some_uuid"
         self.storage_key = self.ktk_index.store(self.store, self.dataset_uuid)
 
@@ -124,7 +124,7 @@ class BuildIndex(AsvBenchmarkConfig):
         self.column = "column"
         self.table = "table"
         self.merge_indices = []
-        for n in range(partitions_to_merge):
+        for _ in range(partitions_to_merge):
             if cardinality < 0:
                 array = ["{:010f}".format(x) for x in np.random.randn(num_values)]
             else:

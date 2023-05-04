@@ -25,10 +25,7 @@ class TestConcatDataframes:
 
     @pytest.fixture(params=[True, False])
     def maybe_iter(self, request):
-        if request.param:
-            return iter
-        else:
-            return list
+        return iter if request.param else list
 
     def test_many(self, dummy_default, maybe_iter):
         dfs = [
@@ -361,15 +358,14 @@ def test_aggregate_to_lists(df_input, by):
     # pandas is broken for empty DFs
     if df_input.empty:
         df_expected = df_input
+    elif by:
+        df_expected = df_input.groupby(by=by, as_index=False)[data_col].agg(
+            lambda series: list(series.values)
+        )
     else:
-        if by:
-            df_expected = df_input.groupby(by=by, as_index=False)[data_col].agg(
-                lambda series: list(series.values)
-            )
-        else:
-            df_expected = pd.DataFrame(
-                {data_col: pd.Series([list(df_input[data_col].values)])}
-            )
+        df_expected = pd.DataFrame(
+            {data_col: pd.Series([list(df_input[data_col].values)])}
+        )
 
     df_actual = aggregate_to_lists(df_input, by, data_col)
 

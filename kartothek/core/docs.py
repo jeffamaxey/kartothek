@@ -216,7 +216,7 @@ def default_docs(func):
                 # Include the `-----` line
                 for param in signature.parameters.keys():
                     doc = _PARAMETER_MAPPING.get(param, None)
-                    if doc and param + ":" not in docs:
+                    if doc and f"{param}:" not in docs:
                         if not doc.endswith("\n"):
                             doc += "\n"
                         if doc.startswith("\n"):

@@ -143,25 +143,23 @@ def dispatch_metapartitions_from_factory(
         for group_name, group in merged_partitions:
             if not isinstance(group_name, tuple):
                 group_name = (group_name,)  # type: ignore
-            mps = []
             logical_conjunction = list(
                 zip(dispatch_by, ["=="] * len(dispatch_by), group_name)
             )
-            for label in group.index.unique():
-                mps.append(
-                    MetaPartition.from_partition(
-                        partition=dataset_factory.partitions[label],
-                        dataset_metadata=dataset_factory.metadata
-                        if dispatch_metadata
-                        else None,
-                        indices=indices_to_dispatch if dispatch_metadata else None,
-                        metadata_version=dataset_factory.metadata_version,
-                        table_meta=dataset_factory.table_meta,
-                        partition_keys=dataset_factory.partition_keys,
-                        logical_conjunction=logical_conjunction,
-                    )
+            yield [
+                MetaPartition.from_partition(
+                    partition=dataset_factory.partitions[label],
+                    dataset_metadata=dataset_factory.metadata
+                    if dispatch_metadata
+                    else None,
+                    indices=indices_to_dispatch if dispatch_metadata else None,
+                    metadata_version=dataset_factory.metadata_version,
+                    table_meta=dataset_factory.table_meta,
+                    partition_keys=dataset_factory.partition_keys,
+                    logical_conjunction=logical_conjunction,
                 )
-            yield mps
+                for label in group.index.unique()
+            ]
     else:
         for part_label in base_df.index.unique():
             part = dataset_factory.partitions[part_label]

@@ -37,7 +37,7 @@ __all__ = (
 def _validator_value(instance, attribute, value):
     if pd.isnull(value):
         raise ValueError(
-            'Cannot use NULL-value to compare w/ column "{}"'.format(instance.column)
+            f'Cannot use NULL-value to compare w/ column "{instance.column}"'
         )
     if isinstance(value, VirtualColumn):
         raise TypeError("Cannot compare two columns.")
@@ -223,7 +223,7 @@ class Condition:
         var_f = get_str_to_python_converter(pa_type)
         var_obj = var_f(var.strip())
 
-        if (op == "==") or (op == "="):
+        if op in ["==", "="]:
             return col_obj == var_obj
         elif op == "<=":
             return col_obj <= var_obj
@@ -480,7 +480,7 @@ class Conjunction:
         return Conjunction.from_two(self, other)
 
     def __str__(self):
-        return " & ".join("({})".format(cond) for cond in self.conditions)
+        return " & ".join(f"({cond})" for cond in self.conditions)
 
     @property
     def columns(self):
@@ -494,12 +494,11 @@ class Conjunction:
         """
         Predicate to be consumed by Kartothek and DataFrame serializer.
         """
-        result = list(
+        if result := list(
             itertools.chain.from_iterable(
                 cond.predicate_part for cond in self.conditions
             )
-        )
-        if result:
+        ):
             return result
         else:
             return None
@@ -631,8 +630,7 @@ class Conjunction:
         for c in todo:
             if c in seen:
                 continue
-            sub = c.__subclasses__()
-            if sub:
+            if sub := c.__subclasses__():
                 # not a leaf
                 todo += c.__subclasses__()
             else:
@@ -686,8 +684,7 @@ class Conjunction:
         ------
         ValueError: If condition cannot be parsed.
         """
-        s = s.strip()
-        if s:
+        if s := s.strip():
             return Conjunction(
                 [Condition.from_string(sub, all_types) for sub in s.split("&")]
             )

@@ -51,7 +51,7 @@ def test_fail_same_store_overwrite(cli, built_cube, skv, store):
 
 
 def test_simple(cli, built_cube, skv, store, store2):
-    assert set(store2.keys()) == set()
+    assert not set(store2.keys())
 
     result = cli("--store=cubes", "my_cube", "copy", "--tgt_store=cubes2")
     assert result.exit_code == 0
@@ -71,7 +71,7 @@ def test_fail_overwrite(cli, built_cube, built_cube2, skv):
 
 
 def test_overwrite_cleanup(cli, built_cube, built_cube2, skv, store, store2):
-    assert len(set(store2.keys())) > 0
+    assert set(store2.keys())
 
     result = cli(
         "--store=cubes", "my_cube", "copy", "--tgt_store=cubes2", "--overwrite"
@@ -85,7 +85,7 @@ def test_overwrite_cleanup(cli, built_cube, built_cube2, skv, store, store2):
 
 
 def test_overwrite_nocleanup(cli, built_cube, built_cube2, skv, store, store2):
-    assert len(set(store2.keys())) > 0
+    assert set(store2.keys())
 
     result = cli(
         "--store=cubes",
@@ -281,7 +281,7 @@ def test_partial_copy_include_exclude_pattern(
 
 @pytest.mark.filterwarnings("ignore::ResourceWarning")
 def test_azure(cli, built_cube_azure, skv_azure, azurestore, azurestore2, caplog):
-    assert set(azurestore2.keys()) == set()
+    assert not set(azurestore2.keys())
 
     result = cli("--store=cubes", "my_cube", "copy", "--tgt_store=cubes2")
     assert result.exit_code == 0

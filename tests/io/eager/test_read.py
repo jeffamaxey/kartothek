@@ -30,11 +30,7 @@ def _read_table(*args, **kwargs):
         kwargs["table"] = param_tables
     res = read_table(*args, **kwargs)
 
-    if len(res):
-        # Array split conserves dtypes
-        return np.array_split(res, len(res))
-    else:
-        return [res]
+    return np.array_split(res, len(res)) if len(res) else [res]
 
 
 def _read_dataset(output_type, *args, **kwargs):
@@ -59,11 +55,7 @@ def backend_identifier():
 
 
 def test_read_table_eager(dataset, store_session, use_categoricals):
-    if use_categoricals:
-        categories = {SINGLE_TABLE: ["P"]}
-    else:
-        categories = None
-
+    categories = {SINGLE_TABLE: ["P"]} if use_categoricals else None
     df = read_table(
         store=store_session,
         dataset_uuid="dataset_uuid",

@@ -71,9 +71,7 @@ def _remove_invalids(dct):
     new_dict = {}
     for key, value in dct.items():
         if isinstance(value, dict):
-            tmp = _remove_invalids(value)
-            # Do not propagate empty dicts
-            if tmp:
+            if tmp := _remove_invalids(value):
                 new_dict[key] = tmp
         elif not isinstance(value, InvalidObject):
             new_dict[key] = value
@@ -89,31 +87,26 @@ def _combine_metadata(dataset_metadata, append_to_list):
     if len(dataset_metadata) > 2:
         first = _combine_metadata(dataset_metadata[::2], append_to_list)
         second = _combine_metadata(dataset_metadata[1::2], append_to_list)
-        final = _combine_metadata([first, second], append_to_list)
-        return final
+        return _combine_metadata([first, second], append_to_list)
     else:
         first = dataset_metadata.pop()
         second = dataset_metadata.pop()
         if first == second:
             return first
-        # None is harmless and may occur if a key appears in one but not the other dict
         elif first is None or second is None:
             return first if first is not None else second
         elif isinstance(first, dict) and isinstance(second, dict):
-            new_dict = {}
             keys = set(first.keys())
             keys.update(second.keys())
-            for key in keys:
-                new_dict[key] = _combine_metadata(
+            return {
+                key: _combine_metadata(
                     [first.get(key), second.get(key)], append_to_list
                 )
-            return new_dict
+                for key in keys
+            }
         elif isinstance(first, list) and isinstance(second, list):
             new_list = first.extend(second)
-            if append_to_list:
-                return new_list
-            else:
-                return list(set(new_list))
+            return new_list if append_to_list else list(set(new_list))
         else:
             return InvalidObject()
 
@@ -121,26 +114,22 @@ def _combine_metadata(dataset_metadata, append_to_list):
 def _ensure_compatible_indices(
     dataset: Optional[DatasetMetadataBase], secondary_indices: Optional[Iterable[str]],
 ) -> InferredIndices:
-    if dataset:
-        ds_secondary_indices = list(dataset.secondary_indices.keys())
-
-        if secondary_indices and not set(secondary_indices).issubset(
-            ds_secondary_indices
-        ):
-            raise ValueError(
-                f"Incorrect indices provided for dataset.\n"
-                f"Expected: {ds_secondary_indices}\n"
-                f"But got: {secondary_indices}"
-            )
-        return ds_secondary_indices
-    else:
+    if not dataset:
         # We return `False` if there is no dataset in storage and `secondary_indices` is undefined
         # (`secondary_indices` is normalized to `[]` by default).
         # In consequence, `parse_input_to_metapartition` will not check indices at the partition level.
-        if secondary_indices:
-            return list(secondary_indices)
-        else:
-            return False
+        return list(secondary_indices) if secondary_indices else False
+    ds_secondary_indices = list(dataset.secondary_indices.keys())
+
+    if secondary_indices and not set(secondary_indices).issubset(
+        ds_secondary_indices
+    ):
+        raise ValueError(
+            f"Incorrect indices provided for dataset.\n"
+            f"Expected: {ds_secondary_indices}\n"
+            f"But got: {secondary_indices}"
+        )
+    return ds_secondary_indices
 
 
 def _ensure_valid_indices(mp_indices, secondary_indices=None, data=None):
@@ -193,10 +182,7 @@ def validate_partition_keys(
                 partition_on = [partition_on]
             if partition_on != ds_factory.partition_keys:
                 raise ValueError(
-                    "Incompatible set of partition keys encountered. "
-                    "Input partitioning was `{}` while actual dataset was `{}`".format(
-                        partition_on, ds_factory.partition_keys
-                    )
+                    f"Incompatible set of partition keys encountered. Input partitioning was `{partition_on}` while actual dataset was `{ds_factory.partition_keys}`"
                 )
         else:
             partition_on = ds_factory.partition_keys
@@ -391,12 +377,10 @@ def align_categories(dfs, categoricals):
             cat_types = {
                 col: dtype.categories.dtype for col, dtype in col_dtype.items()
             }
-            # Should be fixed by pandas>=0.24.0
-            if "buffer source array is read-only" in str(verr):
-                new_df = df.astype(cat_types)
-                new_df = new_df.astype(col_dtype)
-            else:
+            if "buffer source array is read-only" not in str(verr):
                 raise verr
+            new_df = df.astype(cat_types)
+            new_df = new_df.astype(col_dtype)
         return_dfs.append(new_df)
     return return_dfs
 
@@ -439,21 +423,18 @@ def check_single_table_dataset(dataset, expected_table=None):
 
     if len(dataset.tables) > 1:
         raise TypeError(
-            "Expected single table dataset but found dataset with tables: `{}`".format(
-                dataset.tables
-            )
+            f"Expected single table dataset but found dataset with tables: `{dataset.tables}`"
         )
     if expected_table and dataset.tables != [expected_table]:
         raise TypeError(
-            "Unexpected table in dataset:\nFound:\t{}\nExpected:\t{}".format(
-                dataset.tables, expected_table
-            )
+            f"Unexpected table in dataset:\nFound:\t{dataset.tables}\nExpected:\t{expected_table}"
         )
 
 
 def raise_if_indices_overlap(partition_on, secondary_indices):
-    partition_secondary_overlap = set(partition_on) & set(secondary_indices)
-    if partition_secondary_overlap:
+    if partition_secondary_overlap := set(partition_on) & set(
+        secondary_indices
+    ):
         raise RuntimeError(
             f"Cannot create secondary index on partition columns: {partition_secondary_overlap}"
         )

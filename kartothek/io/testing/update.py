@@ -76,11 +76,11 @@ def test_update_dataset_with_partitions__reducer(
     assert ind_updated.index_dct[2] == ind.index_dct[2]
     assert ind.index_dct[1] != ind_updated.index_dct[3]
 
-    expected_metadata = {"dataset": "metadata", "extra": "metadata"}
-
-    # We do not mock the time resolution of this test since otherwise we cannot ensure
-    # that the indices are not overwritten
-    expected_metadata["creation_time"] = dataset_updated.metadata["creation_time"]
+    expected_metadata = {
+        "dataset": "metadata",
+        "extra": "metadata",
+        "creation_time": dataset_updated.metadata["creation_time"],
+    }
 
     assert dataset_updated.metadata == expected_metadata
     assert dataset_updated.uuid == "dataset_uuid"
@@ -248,12 +248,7 @@ def test_update_dataset_with_partitions__reducer_delete_only(
     assert list(dataset_updated.partitions) == ["cluster_2"]
 
     store_files = list(store.keys())
-    # 1 dataset metadata file and 1 index file and 2 partition files
-    # note: the update writes a new index file but due to frozen_time this gets
-    # the same name as the previous one and overwrites it.
-    expected_number_files = 4
-    # common metadata for v4 datasets (1 table)
-    expected_number_files += 1
+    expected_number_files = 4 + 1
     assert len(store_files) == expected_number_files
 
     assert dataset.indices["p"].index_dct == {1: ["cluster_1"], 2: ["cluster_2"]}
@@ -269,7 +264,7 @@ def test_update_dataset_with_partitions__reducer_partitions(
     store_factory, frozen_time_em, bound_update_dataset
 ):
 
-    assert set(store_factory().keys()) == set()
+    assert not set(store_factory().keys())
 
     df1 = pd.DataFrame(
         {"P": [1, 2, 3, 1, 2, 3], "L": [1, 1, 1, 1, 1, 1], "TARGET": np.arange(10, 16)}
@@ -333,12 +328,12 @@ def test_update_dataset_with_partitions__reducer_partitions(
     assert len(cluster_3_label) == 1
     cluster_3_label = cluster_3_label.pop()
     exp_partitions = [
-        "P=1/{}".format(cluster_1_label),
-        "P=1/{}".format(cluster_3_label),
-        "P=2/{}".format(cluster_1_label),
-        "P=2/{}".format(cluster_3_label),
-        "P=3/{}".format(cluster_1_label),
-        "P=3/{}".format(cluster_3_label),
+        f"P=1/{cluster_1_label}",
+        f"P=1/{cluster_3_label}",
+        f"P=2/{cluster_1_label}",
+        f"P=2/{cluster_3_label}",
+        f"P=3/{cluster_1_label}",
+        f"P=3/{cluster_3_label}",
     ]
     assert sorted(exp_partitions) == sorted(dataset_updated.partitions.keys())
     updated_idx_keys = sorted(dataset_updated.indices.keys())
@@ -379,9 +374,7 @@ def test_update_dataset_with_partitions__reducer_nonexistent(
     ind_updated = dataset_updated.indices["p"]
     cluster_3_label = ind_updated.eval_operator(op="==", value=3).pop()
 
-    expected_metadata = {"extra": "metadata"}
-
-    expected_metadata["creation_time"] = TIME_TO_FREEZE_ISO
+    expected_metadata = {"extra": "metadata", "creation_time": TIME_TO_FREEZE_ISO}
 
     assert dataset_updated.metadata == expected_metadata
     assert list(dataset_updated.partitions) == [cluster_3_label]
@@ -392,13 +385,7 @@ def test_update_dataset_with_partitions__reducer_nonexistent(
     assert dataset_updated.uuid == "dataset_uuid"
 
     store_files = list(store.keys())
-    # 1 dataset metadata file and 1 index file and 1 partition files
-    # note: the update writes a new index file but due to frozen_time this gets
-    # the same name as the previous one and overwrites it.
-    expected_number_files = 3
-
-    # common metadata for v4 datasets (1 table)
-    expected_number_files += 1
+    expected_number_files = 3 + 1
     assert len(store_files) == expected_number_files
     exp_updated_idx = {3: [cluster_3_label]}
     assert dataset_updated.indices["p"].index_dct == exp_updated_idx

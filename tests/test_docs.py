@@ -3,15 +3,14 @@ def test_docs_use_api():
 
     files_to_check = []
     for root, _, files in os.walk("../docs"):
-        for f in files:
-            if f.endswith(".rst"):
-                files_to_check.append(os.path.join(root, f))
-
+        files_to_check.extend(
+            os.path.join(root, f) for f in files if f.endswith(".rst")
+        )
+    pattern = r"(from|import) kartothek\.(?!(api))"
     for file_ in files_to_check:
         with open(file_) as fd:
             content = fd.read()
 
-        pattern = r"(from|import) kartothek\.(?!(api))"
         import re
 
         if re.search(pattern, content):

@@ -33,7 +33,7 @@ class TimeValidateCompatible(AsvBenchmarkConfig):
         schema = make_meta(self.df, origin="df")
         self.schemas = [deepcopy(schema) for _ in range(num_schemas)]
         if has_na:
-            empty_schema = make_meta(self.df[0:0], origin="empty")
+            empty_schema = make_meta(self.df[:0], origin="empty")
             # insert alternating empty schemas
             self.schemas[::2] = [
                 deepcopy(empty_schema) for _ in range(len(self.schemas[::2]))

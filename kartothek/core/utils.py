@@ -23,7 +23,7 @@ def _verify_metadata_version(metadata_version):
         )
     elif metadata_version > MAX_METADATA_VERSION:
         raise NotImplementedError(
-            "Future metadata version `{}` encountered.".format(metadata_version)
+            f"Future metadata version `{metadata_version}` encountered."
         )
 
 
@@ -44,10 +44,7 @@ def ensure_string_type(obj: Union[bytes, str]) -> str:
         object which is to be parsed to `str`
 
     """
-    if isinstance(obj, bytes):
-        return obj.decode()
-    else:
-        return str(obj)
+    return obj.decode() if isinstance(obj, bytes) else str(obj)
 
 
 def _is_simplekv_key_value_store(obj: Any) -> bool:
@@ -67,9 +64,7 @@ def ensure_store(store: StoreInput) -> KeyValueStore:
     """
     # This function is often used in an eager context where we may allow
     # non-serializable stores, so skip the pickle test.
-    if _is_simplekv_key_value_store(store):
-        return store
-    return lazy_store(store)()
+    return store if _is_simplekv_key_value_store(store) else lazy_store(store)()
 
 
 def _identity(store: KeyValueStore) -> KeyValueStore:

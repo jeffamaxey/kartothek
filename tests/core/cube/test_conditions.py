@@ -113,7 +113,7 @@ class TestSimpleCondition:
         cond = f(c)
         assert isinstance(cond, t)
         assert cond.OP == op
-        assert str(cond) == "foö {} {}".format(op, value)
+        assert str(cond) == f"foö {op} {value}"
         assert cond.predicate_part == [("foö", op, value)]
         assert cond.active
         hash(cond)
@@ -139,7 +139,7 @@ class TestSimpleCondition:
 
     def test_fails_null_scalar(self):
         with pytest.raises(ValueError) as exc:
-            C("foö") == None  # noqa
+            C("foö") is None
         assert str(exc.value) == 'Cannot use NULL-value to compare w/ column "foö"'
 
     def test_fails_null_list(self):
@@ -387,7 +387,7 @@ class TestConjunction:
     def test_empty_real(self):
         conj = Conjunction([])
         assert conj.conditions == ()
-        assert str(conj) == ""
+        assert not str(conj)
         assert conj.columns == set()
         assert conj.predicate is None
         assert conj.split_by_column() == {}

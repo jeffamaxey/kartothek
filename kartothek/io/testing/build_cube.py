@@ -468,7 +468,7 @@ def test_fails_missing_seed(driver, function_store):
     with pytest.raises(ValueError) as exc:
         driver(data={"foo": df}, cube=cube, store=function_store)
     assert 'Seed data ("seed") is missing.' in str(exc.value)
-    assert list(function_store().keys()) == []
+    assert not list(function_store().keys())
 
 
 def test_fails_missing_dimension_columns(driver, function_store):
@@ -485,7 +485,7 @@ def test_fails_missing_dimension_columns(driver, function_store):
     with pytest.raises(ValueError) as exc:
         driver(data=df_source, cube=cube, store=function_store)
     assert 'Missing dimension columns in seed data "source": y, z' in str(exc.value)
-    assert list(function_store().keys()) == []
+    assert not list(function_store().keys())
 
 
 def test_fails_no_dimension_columns(driver, function_store):
@@ -528,7 +528,7 @@ def test_fails_duplicate_columns(driver, function_store, driver_name):
     with pytest.raises(ValueError) as exc:
         driver(data=df, cube=cube, store=function_store)
     assert 'Duplicate columns found in dataset "seed": x, p, a, a' in str(exc.value)
-    assert list(function_store().keys()) == []
+    assert not list(function_store().keys())
 
 
 def test_fails_missing_partition_columns(driver, function_store):
@@ -542,7 +542,7 @@ def test_fails_missing_partition_columns(driver, function_store):
     with pytest.raises(ValueError) as exc:
         driver(data=df, cube=cube, store=function_store)
     assert 'Missing partition columns in dataset "seed": q, r' in str(exc.value)
-    assert list(function_store().keys()) == []
+    assert not list(function_store().keys())
 
 
 def test_overwrite(driver, function_store):
@@ -1323,7 +1323,7 @@ def test_fail_partition_on_1(driver, function_store):
         in str(cause)
     )
 
-    assert set(function_store().keys()) == set()
+    assert not set(function_store().keys())
 
 
 def test_fail_partition_on_3(driver, function_store):
@@ -1349,7 +1349,7 @@ def test_fail_partition_on_3(driver, function_store):
             partition_on={"enrich": ["p", "p"]},
         )
 
-    assert set(function_store().keys()) == set()
+    assert not set(function_store().keys())
 
 
 def test_fail_partition_on_4(driver, function_store):
@@ -1412,7 +1412,7 @@ def test_partition_on_enrich_none(driver, function_store):
     assert isinstance(ds_source.indices["p"], PartitionIndex)
     assert isinstance(ds_source.indices["x"], ExplicitSecondaryIndex)
 
-    assert set(ds_enrich.indices.keys()) == set()
+    assert not set(ds_enrich.indices.keys())
 
     assert set(ds_source.table_meta) == {SINGLE_TABLE}
     assert set(ds_enrich.table_meta) == {SINGLE_TABLE}

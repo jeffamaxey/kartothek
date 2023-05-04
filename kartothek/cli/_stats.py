@@ -54,7 +54,7 @@ def stats(ctx, include, exclude):
             click.echo("")
         click.echo(h(ktk_cube_dataset_id))
         for what in sorted(stats.keys()):
-            click.echo(b("{}:".format(what)) + "  {:,}".format(stats[what]))
+            click.echo(b(f"{what}:") + "  {:,}".format(stats[what]))
 
         blobsize += stats["blobsize"]
         files += stats["files"]

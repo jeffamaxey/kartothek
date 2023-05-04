@@ -41,10 +41,10 @@ def _get_indexed_columns(datasets):
     indexed_columns: Dict[str, Set[str]]
         Indexed columns per ktk_cube dataset ID.
     """
-    result = {}
-    for ktk_cube_dataset_id, ds in datasets.items():
-        result[ktk_cube_dataset_id] = set(ds.indices.keys())
-    return result
+    return {
+        ktk_cube_dataset_id: set(ds.indices.keys())
+        for ktk_cube_dataset_id, ds in datasets.items()
+    }
 
 
 def _load_required_explicit_indices(datasets, intention, store):
@@ -131,8 +131,7 @@ def _determine_restrictive_dataset_ids(cube, datasets, intention):
                 ktk_cube_dataset_id, Conjunction([])
             ).columns
         ) - (set(cube.dimension_columns) | set(cube.partition_columns))
-        overlap = mask & get_dataset_columns(dataset)
-        if overlap:
+        if overlap := mask & get_dataset_columns(dataset):
             result.add(ktk_cube_dataset_id)
 
     return result
@@ -178,22 +177,29 @@ def _dermine_load_columns(cube, datasets, intention):
         payload = candidates - set(cube.partition_columns) - set(cube.dimension_columns)
         payload_requested = len(payload) > 0
 
-        if is_seed or payload_requested:
-            if is_projection and payload_requested:
-                raise ValueError(
-                    (
-                        'Cannot project dataset "{ktk_cube_dataset_id}" with dimensionality [{dimensionality}] to '
-                        "[{dimension_columns}] while keeping the following payload intact: {payload}"
-                    ).format(
-                        ktk_cube_dataset_id=ktk_cube_dataset_id,
-                        dimensionality=", ".join(sorted(dimensionality)),
-                        dimension_columns=", ".join(
-                            sorted(intention.dimension_columns)
-                        ),
-                        payload=", ".join(sorted(payload)),
-                    )
+        if (
+            is_seed
+            and is_projection
+            and payload_requested
+            or not is_seed
+            and payload_requested
+            and is_projection
+        ):
+            raise ValueError(
+                (
+                    'Cannot project dataset "{ktk_cube_dataset_id}" with dimensionality [{dimensionality}] to '
+                    "[{dimension_columns}] while keeping the following payload intact: {payload}"
+                ).format(
+                    ktk_cube_dataset_id=ktk_cube_dataset_id,
+                    dimensionality=", ".join(sorted(dimensionality)),
+                    dimension_columns=", ".join(
+                        sorted(intention.dimension_columns)
+                    ),
+                    payload=", ".join(sorted(payload)),
                 )
+            )
 
+        elif is_seed or payload_requested:
             result[ktk_cube_dataset_id] = candidates
     return result
 
@@ -295,13 +301,13 @@ def plan_query(
     if callable(store):
         store = store()
 
-    if not isinstance(datasets, dict):
-        datasets = discover_datasets(
+    datasets = (
+        check_datasets(datasets, cube)
+        if isinstance(datasets, dict)
+        else discover_datasets(
             cube=cube, store=store, filter_ktk_cube_dataset_ids=datasets
         )
-    else:
-        datasets = check_datasets(datasets, cube)
-
+    )
     datasets = {
         ktk_cube_dataset_id: ds.load_partition_indices()
         for ktk_cube_dataset_id, ds in datasets.items()
