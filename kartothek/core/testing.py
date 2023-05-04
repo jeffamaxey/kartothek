@@ -91,9 +91,7 @@ def get_scalar_dtype_strategy(exclude=None):
             del possible_strategies[ex]
         else:
             raise ValueError(
-                "Strategy {} unknown. Possible values are {}".format(
-                    ex, possible_strategies.keys()
-                )
+                f"Strategy {ex} unknown. Possible values are {possible_strategies.keys()}"
             )
     return hyp_st.one_of(*list(possible_strategies.values()))
 

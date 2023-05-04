@@ -365,12 +365,12 @@ def test_eq():
     meta_partition_different_df = MetaPartition.from_dict(
         {"label": "test_label", "data": {"core": df_other}}
     )
-    assert not meta_partition == meta_partition_different_df
+    assert meta_partition != meta_partition_different_df
 
     meta_partition_different_label = MetaPartition.from_dict(
         {"label": "test_label", "data": {"not_core": df_same}}
     )
-    assert not meta_partition == meta_partition_different_label
+    assert meta_partition != meta_partition_different_label
 
     meta_partition_empty_data = MetaPartition.from_dict(
         {"label": "test_label", "data": {}}
@@ -380,9 +380,9 @@ def test_eq():
     meta_partition_more_data = MetaPartition.from_dict(
         {"label": "test_label", "data": {"core": df, "not_core": df}}
     )
-    assert not (meta_partition == meta_partition_more_data)
+    assert meta_partition != meta_partition_more_data
 
-    assert not meta_partition == "abc"
+    assert meta_partition != "abc"
 
 
 def test_add_nested_to_plain():
@@ -875,7 +875,7 @@ def test_partition_on_one_level():
         # try to be agnostic about the order
         assert len(df) == 1
         assert "test" not in df
-    expected_labels = set(["test=1/label_1", "test=2/label_1", "test=3/label_1"])
+    expected_labels = {"test=1/label_1", "test=2/label_1", "test=3/label_1"}
     assert labels == expected_labels
 
 
@@ -913,13 +913,11 @@ def test_partition_on_one_level_ts():
         # try to be agnostic about the order
         assert len(df) == 1
         assert "test" not in df
-    expected_labels = set(
-        [
-            "test=2001-01-01%2000%3A00%3A00/label_1",
-            "test=2001-01-02%2000%3A00%3A00/label_1",
-            "test=2001-01-03%2000%3A00%3A00/label_1",
-        ]
-    )
+    expected_labels = {
+        "test=2001-01-01%2000%3A00%3A00/label_1",
+        "test=2001-01-02%2000%3A00%3A00/label_1",
+        "test=2001-01-03%2000%3A00%3A00/label_1",
+    }
     assert labels == expected_labels
 
 
@@ -940,17 +938,15 @@ def test_partition_on_roundtrip(store):
     # Test immediately after dropping and later once with new metapartition to check table meta reloading
     new_mp = new_mp.load_dataframes(store=store)
     assert len(new_mp.metapartitions) == 3
-    dfs = []
-    for internal_mp in new_mp:
-        dfs.append(internal_mp.data["core"])
+    dfs = [internal_mp.data["core"] for internal_mp in new_mp]
     actual_df = pd.concat(dfs).sort_values(by="test").reset_index(drop=True)
     pdt.assert_frame_equal(original_df, actual_df)
 
     for i in range(1, 4):
         # Check with fresh metapartitions
         new_mp = MetaPartition(
-            label="test={}/label_1".format(i),
-            files={"core": "some_uuid/core/test={}/label_1.parquet".format(i)},
+            label=f"test={i}/label_1",
+            files={"core": f"some_uuid/core/test={i}/label_1.parquet"},
             metadata_version=4,
         )
         new_mp = new_mp.load_dataframes(store=store)
@@ -1014,13 +1010,11 @@ def test_partition_urlencode():
         # try to be agnostic about the order
         assert len(df) == 1
         assert "ÖŒå" not in df
-    expected_labels = set(
-        [
-            "%C3%96%C5%92%C3%A5=1/label_1",
-            "%C3%96%C5%92%C3%A5=2/label_1",
-            "%C3%96%C5%92%C3%A5=3/label_1",
-        ]
-    )
+    expected_labels = {
+        "%C3%96%C5%92%C3%A5=1/label_1",
+        "%C3%96%C5%92%C3%A5=2/label_1",
+        "%C3%96%C5%92%C3%A5=3/label_1",
+    }
     assert labels == expected_labels
 
 
@@ -1254,7 +1248,7 @@ def test_reconstruct_index_duplicates(store):
     df = pd.DataFrame({"index_col": [1, 1], "column": list("ab")})
 
     label = "dontcare"
-    key_prefix = "uuid/table/index_col=2/{}".format(label)
+    key_prefix = f"uuid/table/index_col=2/{label}"
     key = ser.store(store, key_prefix, df)
 
     schema = make_meta(df, origin="1", partition_keys="index_col")
@@ -1282,7 +1276,7 @@ def test_reconstruct_index_categories(store):
     )
 
     label = "dontcare"
-    key_prefix = "uuid/table/index_col=2/second_index_col=2/{}".format(label)
+    key_prefix = f"uuid/table/index_col=2/second_index_col=2/{label}"
     key = ser.store(store, key_prefix, df)
 
     schema = make_meta(df, origin="1", partition_keys="index_col")
@@ -1315,10 +1309,10 @@ def test_reconstruct_index_categories(store):
 def test_reconstruct_index_empty_df(store, categoricals):
     ser = ParquetSerializer()
     df = pd.DataFrame({"index_col": [1, 1], "column": list("ab")})
-    df = df[0:0]
+    df = df[:0]
 
     label = "dontcare"
-    key_prefix = "uuid/table/index_col=2/{}".format(label)
+    key_prefix = f"uuid/table/index_col=2/{label}"
     key = ser.store(store, key_prefix, df)
 
     schema = make_meta(df, origin="1", partition_keys="index_col")
@@ -1339,7 +1333,7 @@ def test_reconstruct_index_empty_df(store, categoricals):
     df_expected = pd.DataFrame(
         OrderedDict([("index_col", [2, 2]), ("column", list("ab"))])
     )
-    df_expected = df_expected[0:0]
+    df_expected = df_expected[:0]
     if categoricals:
         df_expected = df_expected.astype({"index_col": "category"})
     pdt.assert_frame_equal(df_actual, df_expected)
@@ -1354,7 +1348,7 @@ def test_reconstruct_date_index(store, metadata_version, dates_as_object):
     )
 
     label = "dontcare"
-    key_prefix = "uuid/table/index_col=2018-06-02/{}".format(label)
+    key_prefix = f"uuid/table/index_col=2018-06-02/{label}"
     key = ser.store(store, key_prefix, df)
 
     schema = make_meta(df, origin="1", partition_keys="index_col")
@@ -1370,10 +1364,7 @@ def test_reconstruct_date_index(store, metadata_version, dates_as_object):
 
     mp = mp.load_dataframes(store, dates_as_object=dates_as_object)
     df_actual = mp.data["table"]
-    if dates_as_object:
-        dt_constructor = date
-    else:
-        dt_constructor = datetime
+    dt_constructor = date if dates_as_object else datetime
     df_expected = pd.DataFrame(
         OrderedDict(
             [
@@ -1386,7 +1377,7 @@ def test_reconstruct_date_index(store, metadata_version, dates_as_object):
 
 
 def test_iter_empty_metapartition():
-    for mp in MetaPartition(None):
+    for _ in MetaPartition(None):
         raise AssertionError(
             "Iterating over an empty MetaPartition should stop immediately"
         )
@@ -1594,7 +1585,7 @@ def test_partition_on_valid_schemas():
 
 def test_dataframe_input_to_metapartition():
     with pytest.raises(ValueError):
-        parse_input_to_metapartition(tuple([1]))
+        parse_input_to_metapartition((1, ))
     with pytest.raises(ValueError):
         parse_input_to_metapartition("abc")
 

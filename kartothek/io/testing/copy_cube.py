@@ -355,18 +355,18 @@ def test_ignore_other(driver, function_store, function_store2):
         dfs.append(
             pd.DataFrame(
                 {
-                    "x{}".format(i): [0, 1, 2, 3],
+                    f"x{i}": [0, 1, 2, 3],
                     "p": [0, 0, 1, 1],
-                    "v{}".format(i): [10, 11, 12, 13],
+                    f"v{i}": [10, 11, 12, 13],
                 }
             )
         )
 
         cubes.append(
             Cube(
-                dimension_columns=["x{}".format(i)],
+                dimension_columns=[f"x{i}"],
                 partition_columns=["p"],
-                uuid_prefix="cube{}".format(i),
+                uuid_prefix=f"cube{i}",
             )
         )
 

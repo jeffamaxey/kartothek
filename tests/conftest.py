@@ -70,21 +70,21 @@ def df_serializer():
 def store_session_factory(tmpdir_factory):
     path = tmpdir_factory.mktemp("fsstore_test")
     path = path.realpath()
-    url = "hfs://{}".format(path)
+    url = f"hfs://{path}"
     return lazy_store(url)
 
 
 @pytest.fixture
 def store_factory(tmpdir):
     path = tmpdir.join("store").strpath
-    url = "hfs://{}".format(path)
+    url = f"hfs://{path}"
     return lazy_store(url)
 
 
 @pytest.fixture
 def store_factory2(tmpdir):
     path = tmpdir.join("store2").strpath
-    url = "hfs://{}".format(path)
+    url = f"hfs://{path}"
     return lazy_store(url)
 
 
@@ -114,7 +114,7 @@ def _refuse_write(*args, **kwargs):
 
 
 def _get_store(path):
-    url = "hfs://{}".format(path)
+    url = f"hfs://{path}"
     store = storefact.get_store_from_url(url)
     store.delete = partial(_check_and_delete, store=store, delete_orig=store.delete)
     return store
@@ -142,10 +142,7 @@ def function_store_ro(function_store):
 
 @pytest.fixture(scope="function", params=["ro", "rw"])
 def function_store_rwro(request, function_store, function_store_ro):
-    if request.param == "ro":
-        return function_store_ro
-    else:
-        return function_store
+    return function_store_ro if request.param == "ro" else function_store
 
 
 @pytest.fixture(scope="function")
@@ -245,8 +242,7 @@ def pytest_runtest_setup(item):
     # If a test is marked with `@pytest.mark.min_metadata_version(x)` the test will
     # be skipped if the `metadata_version` fixture is below this value
     if "metadata_version" in getattr(item, "fixturenames", []):
-        minimal_version = item.get_closest_marker("min_metadata_version")
-        if minimal_version:
+        if minimal_version := item.get_closest_marker("min_metadata_version"):
             minimal_version = minimal_version.args[0]
             if minimal_version > item.callspec.params["metadata_version"]:
                 pytest.skip("Skipped since the metadata version is too low")
@@ -553,9 +549,7 @@ def dataset_partition_keys(meta_partitions_dataframe, store_session_factory):
 
     """
     with cm_frozen_time(TIME_TO_FREEZE):
-        new_mps = []
-        for mp in meta_partitions_dataframe:
-            new_mps.append(mp.partition_on(["P"]))
+        new_mps = [mp.partition_on(["P"]) for mp in meta_partitions_dataframe]
         new_mps = _store_metapartitions(new_mps, store_session_factory())
 
         return store_dataset_from_partitions(

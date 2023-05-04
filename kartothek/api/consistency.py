@@ -86,12 +86,11 @@ def _check_overlap(datasets: Dict[str, DatasetMetadata], cube: Cube) -> None:
         for col in get_payload_subset(get_dataset_columns(ds), cube):
             payload_columns_defaultdct[col].append(ktk_cube_dataset_id)
 
-    payload_columns_dct = {
+    if payload_columns_dct := {
         col: ktk_cube_dataset_ids
         for col, ktk_cube_dataset_ids in payload_columns_defaultdct.items()
         if len(ktk_cube_dataset_ids) > 1
-    }
-    if payload_columns_dct:
+    }:
         raise ValueError(
             "Found columns present in multiple datasets:{}".format(
                 "\n".join(
@@ -129,8 +128,7 @@ def _check_dimension_columns(datasets: Dict[str, DatasetMetadata], cube: Cube) -
         ds = datasets[ktk_cube_dataset_id]
         columns = get_dataset_columns(ds)
         if ktk_cube_dataset_id == cube.seed_dataset:
-            missing = set(cube.dimension_columns) - columns
-            if missing:
+            if missing := set(cube.dimension_columns) - columns:
                 raise ValueError(
                     'Seed dataset "{ktk_cube_dataset_id}" has missing dimension columns: {missing}'.format(
                         ktk_cube_dataset_id=ktk_cube_dataset_id,
@@ -174,8 +172,7 @@ def _check_partition_columns(datasets: Dict[str, DatasetMetadata], cube: Cube) -
         columns = set(ds.partition_keys)
 
         if ktk_cube_dataset_id == cube.seed_dataset:
-            missing = set(cube.partition_columns) - columns
-            if missing:
+            if missing := set(cube.partition_columns) - columns:
                 raise ValueError(
                     'Seed dataset "{ktk_cube_dataset_id}" has missing partition columns: {missing}'.format(
                         ktk_cube_dataset_id=ktk_cube_dataset_id,
@@ -183,10 +180,9 @@ def _check_partition_columns(datasets: Dict[str, DatasetMetadata], cube: Cube) -
                     )
                 )
 
-        unspecified_partition_columns = (
+        if unspecified_partition_columns := (
             get_dataset_columns(ds) - set(ds.partition_keys)
-        ) & set(cube.partition_columns)
-        if unspecified_partition_columns:
+        ) & set(cube.partition_columns):
             raise ValueError(
                 f"Unspecified but provided partition columns in {ktk_cube_dataset_id}: "
                 f"{', '.join(sorted(unspecified_partition_columns))}"
@@ -252,8 +248,8 @@ def _check_indices(datasets: Dict[str, DatasetMetadata], cube: Cube) -> None:
 
                 idx = indices[e]
                 t2 = type(idx)
-                tname2 = t2.__name__
                 if (idx != "dummy") and (not isinstance(idx, types)):
+                    tname2 = t2.__name__
                     raise ValueError(
                         '"{e}" in dataset "{ktk_cube_dataset_id}" is of type {tname2} but should be {tname}.'.format(
                             tname=tname,
@@ -303,7 +299,7 @@ def check_datasets(
         If sanity check failed.
     """
     if cube.seed_dataset not in datasets:
-        raise ValueError('Seed data ("{}") is missing.'.format(cube.seed_dataset))
+        raise ValueError(f'Seed data ("{cube.seed_dataset}") is missing.')
 
     _check_datasets(
         datasets=datasets,

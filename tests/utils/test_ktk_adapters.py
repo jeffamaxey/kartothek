@@ -42,7 +42,7 @@ def ds(function_store, cube_has_ts_col):
 
     mps = [
         MetaPartition(
-            label="mp{}".format(i),
+            label=f"mp{i}",
             data={SINGLE_TABLE: df},
             metadata_version=KTK_CUBE_METADATA_VERSION,
         )
@@ -136,7 +136,7 @@ def test_get_physical_partition_stats(function_store, ds):
         blobsize = sum(
             len(function_store().get(f))
             for f in function_store().iter_keys()
-            if "p={}".format(i) in f
+            if f"p={i}" in f
         )
         expected = {"partitions": 1, "files": 2, "rows": 2, "blobsize": blobsize}
         assert actual == expected

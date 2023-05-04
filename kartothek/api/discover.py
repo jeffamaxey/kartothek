@@ -53,13 +53,12 @@ def _discover_dataset_meta_files(prefix: str, store: StoreInput) -> Set[str]:
 
     store = ensure_store(store)
 
-    names = {
+    return {
         name[: -len(METADATA_BASE_SUFFIX + suffix)]
         for name in store.iter_prefixes(delimiter="/", prefix=prefix)
         for suffix in [METADATA_FORMAT_JSON, METADATA_FORMAT_MSGPACK]
         if name.endswith(METADATA_BASE_SUFFIX + suffix)
     }
-    return names
 
 
 def discover_ktk_cube_dataset_ids(uuid_prefix: str, store: StoreInput) -> Set[str]:
@@ -81,7 +80,7 @@ def discover_ktk_cube_dataset_ids(uuid_prefix: str, store: StoreInput) -> Set[st
     """
     prefix = uuid_prefix + KTK_CUBE_UUID_SEPERATOR
     names = _discover_dataset_meta_files(prefix, store)
-    return set([name[len(prefix) :] for name in names])
+    return {name[len(prefix) :] for name in names}
 
 
 def discover_datasets_unchecked(
@@ -177,8 +176,7 @@ def discover_datasets(
             filter_ktk_cube_dataset_ids = {filter_ktk_cube_dataset_ids}
         else:
             filter_ktk_cube_dataset_ids = set(filter_ktk_cube_dataset_ids)
-        missing = filter_ktk_cube_dataset_ids - set(result.keys())
-        if missing:
+        if missing := filter_ktk_cube_dataset_ids - set(result.keys()):
             raise ValueError(
                 "Could not find the following requested datasets: {missing}".format(
                     missing=", ".join(sorted(missing))
@@ -224,7 +222,7 @@ def discover_cube(
             KTK_CUBE_METADATA_KEY_IS_SEED, ds.metadata.get("klee_is_seed", False)
         )
     }
-    if len(seed_candidates) == 0:
+    if not seed_candidates:
         raise ValueError(
             'Could not find seed dataset for cube "{uuid_prefix}".'.format(
                 uuid_prefix=uuid_prefix

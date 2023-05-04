@@ -97,23 +97,21 @@ def test_file_structure_dataset_v4(store_factory, bound_store_dataframes):
 
     store = store_factory()
     # TODO: json -> msgpack
-    expected_keys = set(
-        [
-            "dataset_uuid.by-dataset-metadata.json",
-            "dataset_uuid/helper/cluster_1.parquet",
-            "dataset_uuid/helper/cluster_2.parquet",
-            "dataset_uuid/helper/_common_metadata",
-            "dataset_uuid/core/cluster_1.parquet",
-            "dataset_uuid/core/cluster_2.parquet",
-            "dataset_uuid/core/_common_metadata",
-        ]
-    )
+    expected_keys = {
+        "dataset_uuid.by-dataset-metadata.json",
+        "dataset_uuid/helper/cluster_1.parquet",
+        "dataset_uuid/helper/cluster_2.parquet",
+        "dataset_uuid/helper/_common_metadata",
+        "dataset_uuid/core/cluster_1.parquet",
+        "dataset_uuid/core/cluster_2.parquet",
+        "dataset_uuid/core/_common_metadata",
+    }
     assert set(expected_keys) == set(store.keys())
 
 
 def test_file_structure_dataset_v4_partition_on(store_factory, bound_store_dataframes):
     store = store_factory()
-    assert set(store.keys()) == set()
+    assert not set(store.keys())
     df = pd.DataFrame(
         {"P": [1, 2, 3, 1, 2, 3], "L": [1, 1, 1, 2, 2, 2], "TARGET": np.arange(10, 16)}
     )
@@ -151,37 +149,35 @@ def test_file_structure_dataset_v4_partition_on(store_factory, bound_store_dataf
 
     store = store_factory()
 
-    expected_keys = set(
-        [
-            "dataset_uuid.by-dataset-metadata.json",
-            "dataset_uuid/helper/P=1/L=1/cluster_1.parquet",
-            "dataset_uuid/helper/P=1/L=1/cluster_2.parquet",
-            "dataset_uuid/helper/P=1/L=2/cluster_1.parquet",
-            "dataset_uuid/helper/P=1/L=2/cluster_2.parquet",
-            "dataset_uuid/helper/P=2/L=1/cluster_1.parquet",
-            "dataset_uuid/helper/P=2/L=1/cluster_2.parquet",
-            "dataset_uuid/helper/P=2/L=2/cluster_1.parquet",
-            "dataset_uuid/helper/P=2/L=2/cluster_2.parquet",
-            "dataset_uuid/helper/P=3/L=1/cluster_1.parquet",
-            "dataset_uuid/helper/P=3/L=1/cluster_2.parquet",
-            "dataset_uuid/helper/P=3/L=2/cluster_1.parquet",
-            "dataset_uuid/helper/P=3/L=2/cluster_2.parquet",
-            "dataset_uuid/helper/_common_metadata",
-            "dataset_uuid/core/P=1/L=1/cluster_1.parquet",
-            "dataset_uuid/core/P=1/L=1/cluster_2.parquet",
-            "dataset_uuid/core/P=1/L=2/cluster_1.parquet",
-            "dataset_uuid/core/P=1/L=2/cluster_2.parquet",
-            "dataset_uuid/core/P=2/L=1/cluster_1.parquet",
-            "dataset_uuid/core/P=2/L=1/cluster_2.parquet",
-            "dataset_uuid/core/P=2/L=2/cluster_1.parquet",
-            "dataset_uuid/core/P=2/L=2/cluster_2.parquet",
-            "dataset_uuid/core/P=3/L=1/cluster_1.parquet",
-            "dataset_uuid/core/P=3/L=1/cluster_2.parquet",
-            "dataset_uuid/core/P=3/L=2/cluster_1.parquet",
-            "dataset_uuid/core/P=3/L=2/cluster_2.parquet",
-            "dataset_uuid/core/_common_metadata",
-        ]
-    )
+    expected_keys = {
+        "dataset_uuid.by-dataset-metadata.json",
+        "dataset_uuid/helper/P=1/L=1/cluster_1.parquet",
+        "dataset_uuid/helper/P=1/L=1/cluster_2.parquet",
+        "dataset_uuid/helper/P=1/L=2/cluster_1.parquet",
+        "dataset_uuid/helper/P=1/L=2/cluster_2.parquet",
+        "dataset_uuid/helper/P=2/L=1/cluster_1.parquet",
+        "dataset_uuid/helper/P=2/L=1/cluster_2.parquet",
+        "dataset_uuid/helper/P=2/L=2/cluster_1.parquet",
+        "dataset_uuid/helper/P=2/L=2/cluster_2.parquet",
+        "dataset_uuid/helper/P=3/L=1/cluster_1.parquet",
+        "dataset_uuid/helper/P=3/L=1/cluster_2.parquet",
+        "dataset_uuid/helper/P=3/L=2/cluster_1.parquet",
+        "dataset_uuid/helper/P=3/L=2/cluster_2.parquet",
+        "dataset_uuid/helper/_common_metadata",
+        "dataset_uuid/core/P=1/L=1/cluster_1.parquet",
+        "dataset_uuid/core/P=1/L=1/cluster_2.parquet",
+        "dataset_uuid/core/P=1/L=2/cluster_1.parquet",
+        "dataset_uuid/core/P=1/L=2/cluster_2.parquet",
+        "dataset_uuid/core/P=2/L=1/cluster_1.parquet",
+        "dataset_uuid/core/P=2/L=1/cluster_2.parquet",
+        "dataset_uuid/core/P=2/L=2/cluster_1.parquet",
+        "dataset_uuid/core/P=2/L=2/cluster_2.parquet",
+        "dataset_uuid/core/P=3/L=1/cluster_1.parquet",
+        "dataset_uuid/core/P=3/L=1/cluster_2.parquet",
+        "dataset_uuid/core/P=3/L=2/cluster_1.parquet",
+        "dataset_uuid/core/P=3/L=2/cluster_2.parquet",
+        "dataset_uuid/core/_common_metadata",
+    }
 
     assert set(expected_keys) == set(store.keys())
 
@@ -291,7 +287,7 @@ def test_store_dataframes_as_dataset(
 
     index_dct = stored_dataset.indices["P"].load(store).index_dct
     assert sorted(index_dct.keys()) == list(range(0, 10))
-    assert any([sorted(p) == ["cluster_1", "cluster_2"] for p in index_dct.values()])
+    assert any(sorted(p) == ["cluster_1", "cluster_2"] for p in index_dct.values())
 
     df_stored = DataFrameSerializer.restore_dataframe(
         key=dataset.partitions["cluster_1"].files["core"], store=store

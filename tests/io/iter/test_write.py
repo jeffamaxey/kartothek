@@ -7,7 +7,7 @@ from kartothek.io.testing.write import *  # noqa
 
 
 def _store_dataframes(df_list, *args, **kwargs):
-    df_generator = (x for x in df_list)
+    df_generator = iter(df_list)
     return store_dataframes_as_dataset__iter(df_generator, *args, **kwargs)
 
 

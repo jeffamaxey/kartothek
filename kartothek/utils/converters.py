@@ -61,9 +61,7 @@ def converter_str_set_optional(obj):
     ValueError
         If an element in the passed object is not string/byte/like.
     """
-    if obj is None:
-        return None
-    return converter_str_set(obj)
+    return None if obj is None else converter_str_set(obj)
 
 
 def converter_str_tupleset(obj: Optional[Union[Iterable[str], str]]) -> Tuple[str, ...]:
@@ -93,7 +91,7 @@ def converter_str_tupleset(obj: Optional[Union[Iterable[str], str]]) -> Tuple[st
     result = converter_tuple(obj)
     result = tuple(converter_str(x) for x in result)
     if len(set(result)) != len(result):
-        raise ValueError("Tuple-set contains duplicates: {}".format(", ".join(result)))
+        raise ValueError(f'Tuple-set contains duplicates: {", ".join(result)}')
     return result
 
 
@@ -114,7 +112,7 @@ def converter_tuple(obj) -> tuple:
     if obj is None:
         return ()
     elif hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes)):
-        return tuple(x for x in obj)
+        return tuple(obj)
     else:
         return (obj,)
 

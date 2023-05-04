@@ -81,7 +81,7 @@ htmlhelp_basename = "kartothek-doc"
 
 
 # -- External mapping ------------------------------------------------------------
-python_version = ".".join(map(str, sys.version_info[0:2]))
+python_version = ".".join(map(str, sys.version_info[:2]))
 
 nitpick_ignore = [
     ("py:class", "kartothek.core._mixins.CopyMixin"),

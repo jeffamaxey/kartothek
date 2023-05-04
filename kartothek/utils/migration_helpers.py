@@ -132,11 +132,13 @@ def get_specific_function_deprecation_warning(
     reason: Optional[str] = None,
 ):
     return (
-        f"The `{function_name}` keyword is deprecated since version "
-        + deprecated_in
-        + " and will be removed"
-        + ((" in version " + removed_in + ".") if removed_in is not None else "")
-        + ((" Reason: " + reason + ".") if reason is not None else "")
+        (
+            f"The `{function_name}` keyword is deprecated since version "
+            + deprecated_in
+            + " and will be removed"
+            + (f" in version {removed_in}." if removed_in is not None else "")
+        )
+        + (f" Reason: {reason}." if reason is not None else "")
         + "."
     )
 
@@ -177,9 +179,9 @@ def _check_params(func: Callable, params: Tuple[str, ...]) -> None:
     """
 
     def _raise_invalid_param_error_if_applicable(
-        params, func_args, is_maybe_duplicate: bool = False
-    ):
-        if not all([parameter in func_args for parameter in params]):
+            params, func_args, is_maybe_duplicate: bool = False
+        ):
+        if any(parameter not in func_args for parameter in params):
             raise ValueError(
                 "Invalid "
                 + (
@@ -191,7 +193,7 @@ def _check_params(func: Callable, params: Tuple[str, ...]) -> None:
                 + "!"
             )
 
-    if len(params) < 1:
+    if not params:
         raise ValueError(
             "At least one parameter must be specified when using this decorator!"
         )

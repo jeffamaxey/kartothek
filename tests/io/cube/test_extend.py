@@ -25,12 +25,12 @@ def driver(driver_name):
     elif driver_name == "eager":
         return extend_cube
     else:
-        raise ValueError("Unknown driver: {}".format(driver_name))
+        raise ValueError(f"Unknown driver: {driver_name}")
 
 
 def _count_execution_to_store(obj, store):
     store = store()
-    key = "counter.{}".format(uuid.uuid4().hex)
+    key = f"counter.{uuid.uuid4().hex}"
     store.put(key, b"")
     return obj
 
@@ -98,15 +98,14 @@ def test_function_executed_once(driver, function_store, driver_name, existing_cu
         seed_dataset="source",
     )
 
-    if driver_name in ("dask_bag_bs1", "dask_bag_bs3"):
-        bag = db.from_sequence(
-            dfs, partition_size=1 if driver_name == "dask_bag_bs1" else 3
-        ).map(_count_execution_to_store, store=function_store)
-        bag = extend_cube_from_bag(
-            data=bag, cube=cube, store=function_store, ktk_cube_dataset_ids=["a", "b"]
-        )
-        bag.compute()
-    else:
-        raise ValueError("Missing implementation for driver: {}".format(driver_name))
+    if driver_name not in ("dask_bag_bs1", "dask_bag_bs3"):
+        raise ValueError(f"Missing implementation for driver: {driver_name}")
 
+    bag = db.from_sequence(
+        dfs, partition_size=1 if driver_name == "dask_bag_bs1" else 3
+    ).map(_count_execution_to_store, store=function_store)
+    bag = extend_cube_from_bag(
+        data=bag, cube=cube, store=function_store, ktk_cube_dataset_ids=["a", "b"]
+    )
+    bag.compute()
     assert len(function_store().keys(prefix="counter.")) == 2

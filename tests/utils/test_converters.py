@@ -12,53 +12,32 @@ from kartothek.utils.converters import (
 )
 
 
-@pytest.mark.parametrize(
-    "param,expected",
-    [
-        (
+@pytest.mark.parametrize("param,expected", [(
             # param
             "foo",
             # expected
             {"foo"},
-        ),
-        (
+        ), (
             # param
             "foo",
             # expected
             {"foo"},
-        ),
-        (
+        ), (
             # param
             b"foo",
             # expected
             {"foo"},
-        ),
-        (
+        ), (
             # param
             {"foo", "bar"},
             # expected
             {"foo", "bar"},
-        ),
-        (
-            # param
-            {"foo", b"foo"},
-            # expected
-            {"foo", "foo"},
-        ),
-        (
-            # param
-            ["foo", b"foo"],
-            # expected
-            {"foo", "foo"},
-        ),
-        (
+        ), ({"foo", b"foo"}, {"foo"}), (["foo", b"foo"], {"foo"}), (
             # param
             None,
             # expected
             set(),
-        ),
-    ],
-)
+        )])
 def test_str_set(param, expected):
     actual = converter_str_set(param)
     assert isinstance(actual, frozenset)
@@ -66,53 +45,32 @@ def test_str_set(param, expected):
     assert all(isinstance(x, str) for x in actual)
 
 
-@pytest.mark.parametrize(
-    "param,expected",
-    [
-        (
+@pytest.mark.parametrize("param,expected", [(
             # param
             "foo",
             # expected
             {"foo"},
-        ),
-        (
+        ), (
             # param
             "foo",
             # expected
             {"foo"},
-        ),
-        (
+        ), (
             # param
             b"foo",
             # expected
             {"foo"},
-        ),
-        (
+        ), (
             # param
             {"foo", "bar"},
             # expected
             {"foo", "bar"},
-        ),
-        (
-            # param
-            {"foo", b"foo"},
-            # expected
-            {"foo", "foo"},
-        ),
-        (
-            # param
-            ["foo", b"foo"],
-            # expected
-            {"foo", "foo"},
-        ),
-        (
+        ), ({"foo", b"foo"}, {"foo"}), (["foo", b"foo"], {"foo"}), (
             # param
             None,
             # expected
             None,
-        ),
-    ],
-)
+        )])
 def test_str_set_optional(param, expected):
     actual = converter_str_set_optional(param)
     assert actual == expected
@@ -180,12 +138,7 @@ def test_str_tupleset_fail_duplicates():
     ],
 )
 def test_str_tupleset_fail_unstable(param):
-    with pytest.raises(
-        TypeError,
-        match="which has type {} has an unstable iteration order".format(
-            type(param).__name__
-        ),
-    ):
+    with pytest.raises(TypeError, match=f"which has type {type(param).__name__} has an unstable iteration order"):
         converter_str_tupleset(param)
 
 
@@ -217,29 +170,12 @@ def test_str_ok(obj, expected):
     assert actual == expected
 
 
-@pytest.mark.parametrize(
-    "obj,msg",
-    [
-        (
+@pytest.mark.parametrize("obj,msg", [(
             # obj
             1,
             # msg
             "Object of type int is not a string: 1",
-        ),
-        (
-            # obj
-            ["a", "b"],
-            # msg
-            "Object of type list is not a string: {}".format(["a", "b"]),
-        ),
-        (
-            # obj
-            ["a"],
-            # msg
-            "Object of type list is not a string: {}".format(["a"]),
-        ),
-    ],
-)
+        ), (["a", "b"], f'Object of type list is not a string: {["a", "b"]}'), (["a"], f'Object of type list is not a string: {["a"]}')])
 def test_str_fail(obj, msg):
     with pytest.raises(TypeError) as exc:
         converter_str(obj)

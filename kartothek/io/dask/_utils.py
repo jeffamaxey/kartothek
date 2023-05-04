@@ -23,10 +23,7 @@ def _get_data(mp, table=None):
     """
     Task to avoid serialization of lambdas
     """
-    if table:
-        return mp.data[table]
-    else:
-        return mp.data
+    return mp.data[table] if table else mp.data
 
 
 def _cast_categorical_to_index_cat(df, categories):

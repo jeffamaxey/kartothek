@@ -32,10 +32,7 @@ def _validate_not_subset(of, allow_none=False):
         if allow_none and value is None:
             return
         other_set = set(getattr(instance, of))
-        if isinstance(value, str):
-            my_set = {value}
-        else:
-            my_set = set(value)
+        my_set = {value} if isinstance(value, str) else set(value)
         share = my_set & other_set
 
         if share:
@@ -67,10 +64,7 @@ def _validate_subset(of, allow_none=False):
         if allow_none and value is None:
             return
         other_set = set(getattr(instance, of))
-        if isinstance(value, str):
-            my_set = {value}
-        else:
-            my_set = set(value)
+        my_set = {value} if isinstance(value, str) else set(value)
         too_much = my_set - other_set
 
         if too_much:

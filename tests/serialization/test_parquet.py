@@ -27,7 +27,7 @@ def reference_store():
         "reference-data",
         "pyarrow-bugs",
     )
-    return storefact.get_store_from_url("hfs://{}".format(path))
+    return storefact.get_store_from_url(f"hfs://{path}")
 
 
 def test_timestamp_us(store):
@@ -77,10 +77,7 @@ def test_rowgroup_writing(store, use_categorical, chunk_size):
     # RowGroup: "ArrowIOError: Column 2 had 2 while previous column had 4".
     # We have special handling for that in pandas-serialiser that should be
     # removed once we switch to 0.10.0
-    if use_categorical:
-        df_write = df.astype({"string": "category"})
-    else:
-        df_write = df
+    df_write = df.astype({"string": "category"}) if use_categorical else df
     key = serialiser.store(store, "prefix", df_write)
 
     parquet_file = ParquetFile(store.open(key))
@@ -478,7 +475,7 @@ def test_retry_on_IOError(monkeypatch, caplog, store):
         nonlocal retry_count
         retry_count += 1
 
-        if not retry_count > 1:
+        if retry_count <= 1:
             # fail for the first try
             raise IOError()
         elif retry_count > 1:

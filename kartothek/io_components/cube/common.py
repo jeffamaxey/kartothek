@@ -20,9 +20,7 @@ def check_store_factory(store):
     TypeError: In case the store is not a factory.
     """
     if not callable(store):
-        raise TypeError(
-            "store must be a factory but is {}".format(type(store).__name__)
-        )
+        raise TypeError(f"store must be a factory but is {type(store).__name__}")
 
 
 def assert_stores_different(store1, store2, prefix):
@@ -82,7 +80,7 @@ def check_blocksize(blocksize):
     """
     if not isinstance(blocksize, int):
         raise TypeError(
-            "blocksize must be an integer but is {}".format(type(blocksize).__name__)
+            f"blocksize must be an integer but is {type(blocksize).__name__}"
         )
     if blocksize <= 0:
-        raise ValueError("blocksize must be > 0 but is {}".format(blocksize))
+        raise ValueError(f"blocksize must be > 0 but is {blocksize}")

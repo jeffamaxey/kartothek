@@ -214,9 +214,8 @@ def build_cube(
         data=data, cube=cube, existing_payload=set(), partition_on=prep_partition_on
     )
 
-    datasets = {}
-    for ktk_cube_dataset_id, part in data.items():
-        datasets[ktk_cube_dataset_id] = store_dataframes_as_dataset(
+    datasets = {
+        ktk_cube_dataset_id: store_dataframes_as_dataset(
             store=store,
             dataset_uuid=cube.ktk_dataset_uuid(ktk_cube_dataset_id),
             dfs=part,
@@ -227,7 +226,8 @@ def build_cube(
             df_serializer=df_serializer or KTK_CUBE_DF_SERIALIZER,
             overwrite=overwrite,
         )
-
+        for ktk_cube_dataset_id, part in data.items()
+    }
     return apply_postwrite_checks(
         datasets=datasets, cube=cube, store=store, existing_datasets=existing_datasets
     )
@@ -302,9 +302,8 @@ def extend_cube(
         partition_on=prep_partition_on,
     )
 
-    datasets = {}
-    for ktk_cube_dataset_id, part in data.items():
-        datasets[ktk_cube_dataset_id] = store_dataframes_as_dataset(
+    datasets = {
+        ktk_cube_dataset_id: store_dataframes_as_dataset(
             store=store,
             dataset_uuid=cube.ktk_dataset_uuid(ktk_cube_dataset_id),
             dfs=part,
@@ -315,7 +314,8 @@ def extend_cube(
             df_serializer=df_serializer or KTK_CUBE_DF_SERIALIZER,
             overwrite=overwrite,
         )
-
+        for ktk_cube_dataset_id, part in data.items()
+    }
     return apply_postwrite_checks(
         datasets=datasets, cube=cube, store=store, existing_datasets=existing_datasets
     )
@@ -375,7 +375,7 @@ def query_cube(
     )
     dfs = [load_group(group=g, store=store, cube=cube) for g in groups]
     dfs = [df for df in dfs if not df.empty]
-    if not intention.partition_by and (len(dfs) > 0):
+    if not intention.partition_by and dfs:
         dfs = [
             quick_concat(
                 dfs=dfs,
@@ -553,7 +553,7 @@ def copy_cube(
                     existing_datasets=existing_datasets,
                 )
         else:
-            copied.update(md_transformed)
+            copied |= md_transformed
 
 
 def collect_stats(cube, store, datasets=None):
@@ -786,11 +786,7 @@ def append_to_cube(
 
 
 def _normalize_user_input(data, cube):
-    if isinstance(data, (dict, pd.DataFrame)):
-        data = [data]
-    else:
-        data = list(data)
-
+    data = [data] if isinstance(data, (dict, pd.DataFrame)) else list(data)
     data_lists = defaultdict(list)
     for part in data:
         part = multiplex_user_input(part, cube)
@@ -815,12 +811,11 @@ def _prepare_data_for_ktk_all(data, cube, existing_payload, partition_on):
         for ktk_cube_dataset_id, df in data.items()
     }
 
-    empty_datasets = {
+    if empty_datasets := {
         ktk_cube_dataset_id
         for ktk_cube_dataset_id, part in data.items()
         if part.is_sentinel
-    }
-    if empty_datasets:
+    }:
         cause = ValueError(
             "Cannot write empty datasets: {empty_datasets}".format(
                 empty_datasets=", ".join(sorted(empty_datasets))

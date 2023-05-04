@@ -91,12 +91,12 @@ def _match_pattern(what, items, pattern):
     """
     result = set()
     for part in pattern.split(","):
-        found = set(fnmatch.filter(items, part.strip()))
-        if not found:
+        if found := set(fnmatch.filter(items, part.strip())):
+            result |= found
+        else:
             raise click.UsageError(
                 "Could not find {what} {part}".format(what=what, part=part)
             )
-        result |= found
     return result
 
 

@@ -68,13 +68,10 @@ class SchemaWrapper:
             if len(index_cols) > 1:
                 raise NotImplementedError("Treatement of MultiIndex not implemented.")
 
-            for ix, col in enumerate(index_cols):
+            for col in index_cols:
                 # Range index is now serialized using start/end information. This special treatment
                 # removes it from the columns which is fine
-                if isinstance(col, dict):
-                    pass
-                # other indices are still tracked as a column
-                else:
+                if not isinstance(col, dict):
                     index_level_ix = schema.get_field_index(col)
                     # this may happen for the schema of an empty df
                     if index_level_ix >= 0:
@@ -173,11 +170,7 @@ def normalize_column_order(schema, partition_keys=None):
     if not isinstance(schema, SchemaWrapper):
         schema = SchemaWrapper(schema, "__unknown__")
 
-    if partition_keys is None:
-        partition_keys = []
-    else:
-        partition_keys = list(partition_keys)
-
+    partition_keys = [] if partition_keys is None else list(partition_keys)
     pandas_metadata = schema.pandas_metadata
     origin = schema.origin
 
@@ -190,11 +183,7 @@ def normalize_column_order(schema, partition_keys=None):
         field_name = cmd["field_name"]
         field_idx = schema.get_field_index(field_name)
 
-        if field_idx >= 0:
-            field = schema[field_idx]
-        else:
-            field = None
-
+        field = schema[field_idx] if field_idx >= 0 else None
         if name is None:
             cols_misc.append((cmd, field))
         elif name in partition_keys:
@@ -202,11 +191,7 @@ def normalize_column_order(schema, partition_keys=None):
         else:
             cols_payload.append((name, cmd, field))
 
-    ordered = []
-    for k in partition_keys:
-        if k in cols_partition:
-            ordered.append(cols_partition[k])
-
+    ordered = [cols_partition[k] for k in partition_keys if k in cols_partition]
     ordered += [(cmd, f) for _name, cmd, f in sorted(cols_payload, key=lambda x: x[0])]
     ordered += cols_misc
 
@@ -323,7 +308,7 @@ def normalize_type(
         t_pa2, t_pd2, t_np2, metadata2 = normalize_type(
             t_pa.value_type, t_pd[len("list[") : -1], None, None
         )
-        return pa.list_(t_pa2), "list[{}]".format(t_pd2), "object", None
+        return pa.list_(t_pa2), f"list[{t_pd2}]", "object", None
     elif pa.types.is_dictionary(t_pa):
         # downcast to dictionary content, `t_pd` is useless in that case
         return normalize_type(t_pa.value_type, t_np, t_np, None)
@@ -332,7 +317,7 @@ def normalize_type(
 
 
 def _get_common_metadata_key(dataset_uuid, table):
-    return "{}/{}/{}".format(dataset_uuid, table, naming.TABLE_METADATA_FILE)
+    return f"{dataset_uuid}/{table}/{naming.TABLE_METADATA_FILE}"
 
 
 def read_schema_metadata(
@@ -411,11 +396,9 @@ def _pandas_in_schemas(schemas):
     """
     Check if any schema contains pandas metadata
     """
-    has_pandas = False
-    for schema in schemas:
-        if schema.metadata and b"pandas" in schema.metadata:
-            has_pandas = True
-    return has_pandas
+    return any(
+        schema.metadata and b"pandas" in schema.metadata for schema in schemas
+    )
 
 
 def _determine_schemas_to_compare(
@@ -462,7 +445,7 @@ def _determine_schemas_to_compare(
 
             # we don't care about the pandas version, since we assume it's safe
             # to read datasets that were written by older or newer versions.
-            pandas_metadata["pandas_version"] = "{}".format(pd.__version__)
+            pandas_metadata["pandas_version"] = f"{pd.__version__}"
 
             metadata_clean = deepcopy(metadata)
             metadata_clean[b"pandas"] = _dict_to_binary(pandas_metadata)
@@ -545,12 +528,9 @@ def _strip_columns_from_schema(schema, field_names):
 
 def _remove_diff_header(diff):
     diff = list(diff)
-    for ix, el in enumerate(diff):
-        # This marks the first actual entry of the diff
-        # e.g. @@ -1,5 + 2,5 @@
-        if el.startswith("@"):
-            return diff[ix:]
-    return diff
+    return next(
+        (diff[ix:] for ix, el in enumerate(diff) if el.startswith("@")), diff
+    )
 
 
 def _diff_schemas(first, second):
@@ -560,7 +540,7 @@ def _diff_schemas(first, second):
     second_pyarrow_info = str(second.remove_metadata())
     pyarrow_diff = _remove_diff_header(
         difflib.unified_diff(
-            str(first_pyarrow_info).splitlines(), str(second_pyarrow_info).splitlines()
+            first_pyarrow_info.splitlines(), second_pyarrow_info.splitlines()
         )
     )
 
@@ -573,14 +553,12 @@ def _diff_schemas(first, second):
         )
     )
 
-    diff_string = (
+    return (
         "Arrow schema:\n"
         + "\n".join(pyarrow_diff)
         + "\n\nPandas_metadata:\n"
         + "\n".join(pandas_meta_diff)
     )
-
-    return diff_string
 
 
 def validate_compatible(schemas, ignore_pandas=False):
@@ -734,9 +712,7 @@ def validate_shared_columns(schemas, ignore_pandas=False):
                     continue
                 if ref != obj:
                     raise ValueError(
-                        'Found incompatible entries for column "{}"\n{}\n{}'.format(
-                            col, ref, obj
-                        )
+                        f'Found incompatible entries for column "{col}"\n{ref}\n{obj}'
                     )
             else:
                 seen[col] = obj

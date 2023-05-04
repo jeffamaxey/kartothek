@@ -35,7 +35,7 @@ def test_simple(driver, function_store):
     )
     driver(cube=cube, store=function_store)
 
-    assert set(function_store().keys()) == set()
+    assert not set(function_store().keys())
 
 
 def test_keep_other(driver, function_store):
@@ -101,7 +101,7 @@ def test_delete_twice(driver, function_store):
     driver(cube=cube, store=function_store)
     driver(cube=cube, store=function_store)
 
-    assert set(function_store().keys()) == set()
+    assert not set(function_store().keys())
 
 
 def test_partial_delete(driver, function_store):

@@ -17,7 +17,7 @@ def test_fail_cube_missing(cli, skv):
 
 
 def test_simple(cli, built_cube, skv, store):
-    key = built_cube.ktk_dataset_uuid(built_cube.seed_dataset) + "/foo"
+    key = f"{built_cube.ktk_dataset_uuid(built_cube.seed_dataset)}/foo"
     store.put(key, b"")
 
     result = cli("--store=cubes", "my_cube", "cleanup")

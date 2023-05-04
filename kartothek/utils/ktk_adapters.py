@@ -87,14 +87,11 @@ def get_dataset_keys(dataset):
     keys: Set[str]
         Storage keys.
     """
-    keys = set()
-
-    # central metadata
-    keys.add(dataset.uuid + METADATA_BASE_SUFFIX + METADATA_FORMAT_JSON)
+    keys = {dataset.uuid + METADATA_BASE_SUFFIX + METADATA_FORMAT_JSON}
 
     # common metadata
     for table in dataset.tables:
-        keys.add("{}/{}/{}".format(dataset.uuid, table, TABLE_METADATA_FILE))
+        keys.add(f"{dataset.uuid}/{table}/{TABLE_METADATA_FILE}")
 
     # indices
     for index in dataset.indices.values():
@@ -216,13 +213,12 @@ def get_partition_dataframe(dataset, cube):
             index=pd.Index(sorted(dataset.partitions.keys()), name="partition")
         )
 
-    series_list = []
-    for pcol in cols:
-        series_list.append(
-            dataset.indices[pcol].as_flat_series(
-                partitions_as_index=True, compact=False
-            )
+    series_list = [
+        dataset.indices[pcol].as_flat_series(
+            partitions_as_index=True, compact=False
         )
+        for pcol in cols
+    ]
     return (
         pd.concat(series_list, axis=1, sort=False)
         .sort_index()

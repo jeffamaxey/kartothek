@@ -369,18 +369,13 @@ def read_dataset_as_delayed_metapartitions(
             predicates=predicates,
         )
 
-    categoricals_from_index = _maybe_get_categoricals_from_index(
+    if categoricals_from_index := _maybe_get_categoricals_from_index(
         ds_factory, categoricals
-    )
-
-    if categoricals_from_index:
-        func_dict = defaultdict(_identity)
-        func_dict.update(
-            {
-                table: partial(_cast_categorical_to_index_cat, categories=cats)
-                for table, cats in categoricals_from_index.items()
-            }
-        )
+    ):
+        func_dict = defaultdict(_identity) | {
+            table: partial(_cast_categorical_to_index_cat, categories=cats)
+            for table, cats in categoricals_from_index.items()
+        }
         mps = map_delayed(
             partial(MetaPartition.apply, func=func_dict, type_safe=True), mps
         )

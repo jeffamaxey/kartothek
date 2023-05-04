@@ -64,13 +64,10 @@ def quote_indices(indices: List[Tuple[str, str]]) -> List[str]:
     List[str]
         List with urlencoded column=value strings
     """
-    quoted_pairs = []
-    for column, value in indices:
-        quoted_pairs.append(
-            "{column}={value}".format(column=quote(column), value=quote(value))
-        )
-
-    return quoted_pairs
+    return [
+        "{column}={value}".format(column=quote(column), value=quote(value))
+        for column, value in indices
+    ]
 
 
 def unquote_indices(index_strings: List[str]) -> List[Tuple[str, str]]:

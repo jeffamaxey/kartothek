@@ -72,7 +72,7 @@ def concat_dataframes(dfs, default=None):
         # input blocks into the output DF). This is very unfortunate especially for larger queries. This column-based
         # approach effectively reduces the maximum memory consumption and to our knowledge is not measuable slower.
         colset = set(dfs[0].columns)
-        if not all(colset == set(df.columns) for df in dfs):
+        if any(colset != set(df.columns) for df in dfs):
             raise ValueError("Not all DataFrames have the same set of columns!")
 
         res = pd.DataFrame(index=pd.RangeIndex(sum(len(df) for df in dfs)))
@@ -118,7 +118,7 @@ def is_dataframe_sorted(df, columns):
     """
     columns = list(columns)
 
-    if len(columns) == 0:
+    if not columns:
         raise ValueError("`columns` must contain at least 1 column")
 
     state = None
@@ -134,12 +134,7 @@ def is_dataframe_sorted(df, columns):
             comp_le = data0 < data1
             comp_eq = data0 == data1
 
-        if state is None:
-            # last column
-            state = comp_le | comp_eq
-        else:
-            state = comp_le | (comp_eq & state)
-
+        state = comp_le | comp_eq if state is None else comp_le | (comp_eq & state)
     return state.all()
 
 
@@ -245,11 +240,7 @@ def drop_sorted_duplicates_keep_last(df, columns):
     """
     columns = list(columns)
     dup_mask = mask_sorted_duplicates_keep_last(df, columns)
-    if dup_mask.any():
-        # pandas is just slow, so try to avoid the indexing call
-        return df.iloc[~dup_mask]
-    else:
-        return df
+    return df.iloc[~dup_mask] if dup_mask.any() else df
 
 
 def aggregate_to_lists(df, by, data_col):
@@ -357,7 +348,7 @@ def merge_dataframes_robust(df1, df2, how):
     columns2 = set(df2.columns)
     joined_columns = [c for c in df1.columns if c in columns2]
 
-    if len(joined_columns) == 0:
+    if not joined_columns:
         df1 = df1.copy()
         df2 = df2.copy()
         df1[dummy_column] = 1

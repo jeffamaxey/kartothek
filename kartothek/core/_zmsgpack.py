@@ -10,8 +10,7 @@ except ImportError:
 
 def packb(obj):
     cctx = zstd.ZstdCompressor(write_content_size=True)
-    compressed = cctx.compress(msgpack.packb(obj))
-    return compressed
+    return cctx.compress(msgpack.packb(obj))
 
 
 def unpackb(bts):

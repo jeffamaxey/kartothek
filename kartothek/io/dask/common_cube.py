@@ -71,8 +71,9 @@ def ensure_valid_cube_indices(
         for internal_table in ds.table_meta:
             dataset_columns = set(ds.table_meta[internal_table].names)
             table_indices = cube.index_columns & dataset_columns
-            compatible_indices = _ensure_compatible_indices(ds, table_indices)
-            if compatible_indices:
+            if compatible_indices := _ensure_compatible_indices(
+                ds, table_indices
+            ):
                 dataset_indices.append(set(compatible_indices))
     required_indices = cube.index_columns.union(*dataset_indices)
     suppress_index_on = cube.suppress_index_on.difference(*dataset_indices)
@@ -486,8 +487,7 @@ def _collect_dfs(iter_of_lists):
 
 
 def _quick_concat_or_none(dfs, dimension_columns, partition_columns):
-    dfs = list(dfs)
-    if dfs:
+    if dfs := list(dfs):
         return quick_concat(
             dfs=dfs,
             dimension_columns=dimension_columns,

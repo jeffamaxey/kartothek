@@ -168,7 +168,7 @@ def test_store_dataframes_as_dataset_partition_on_inconsistent(test_input, store
             partition_on=[test_input],
             metadata_version=4,
         )
-    assert str(excinfo.value) == "Partition column(s) missing: {}".format(test_input)
+    assert str(excinfo.value) == f"Partition column(s) missing: {test_input}"
 
 
 def test_store_dataframes_as_dataset_no_pipeline(metadata_version, store):
